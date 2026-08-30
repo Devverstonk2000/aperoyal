@@ -362,6 +362,39 @@ try { champions = JSON.parse(localStorage.getItem('mbr_champs') || '[]'); } catc
 /* ============ HELPERS ============ */
 function hashStr(s){ let h = 2166136261; for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 function shortWallet(w){ return w.length > 10 ? w.slice(0,4) + '..' + w.slice(-4) : w; }
+
+/* ---- pump.fun usernames (looked up via CORS relay, cached per wallet) ---- */
+const usernameCache = {};
+const nameQueue = [];
+let nameBusy = false;
+function displayName(w){ return usernameCache[w] || shortWallet(w); }
+function resolveName(wallet){
+  if (!wallet || wallet.length < 30) return;
+  if (Object.prototype.hasOwnProperty.call(usernameCache, wallet)) return;
+  if (demoTimer) return;                 // demo wallets are fake — skip lookups
+  usernameCache[wallet] = '';            // placeholder: prevents duplicate queueing
+  nameQueue.push(wallet);
+  pumpNameQueue();
+}
+async function pumpNameQueue(){
+  if (nameBusy) return;
+  nameBusy = true;
+  while (nameQueue.length){
+    const wallet = nameQueue.shift();
+    try {
+      const url = 'https://api.allorigins.win/raw?url=' +
+        encodeURIComponent('https://frontend-api-v3.pump.fun/users/' + wallet);
+      const j = await fetch(url).then(r => r.json());
+      if (j && j.username){
+        usernameCache[wallet] = j.username;
+        const m = monkeys.find(mk => mk.wallet === wallet);
+        if (m) m.name = j.username;
+      }
+    } catch(e){ /* leave short address */ }
+    await new Promise(r => setTimeout(r, 800));
+  }
+  nameBusy = false;
+}
 function rand(a,b){ return a + Math.random()*(b-a); }
 function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy); }
 function rankIndex(score){
@@ -436,7 +469,7 @@ function makeMonkey(wallet, solAmount){
   const hue = h % 360;
   const hp = Math.min(40 + solAmount * 120, 900);
   const m = {
-    wallet, name: shortWallet(wallet),
+    wallet, name: displayName(wallet),
     x: rand(60, W-60), y: rand(80, H-60),
     vx: 0, vy: 0,
     hp, maxHp: hp,
@@ -482,6 +515,7 @@ function refreshRank(m, announce){
 }
 
 function spawnBuy(wallet, sol){
+  resolveName(wallet);
   const existing = monkeys.find(m => m.wallet === wallet);
   if (existing){
     const heal = sol * 120;
@@ -490,12 +524,12 @@ function spawnBuy(wallet, sol){
     existing.size = Math.min(existing.size + sol * 4, 46);
     existing.invested += sol;
     floatText(existing.x, existing.y - existing.size - 14, `+${Math.round(heal)} HP`, '#39d98a');
-    addEvent('buy', `<span class="sol">BUY ${sol.toFixed(2)} SOL</span> — ${shortWallet(wallet)}'s ape powers up!`);
+    addEvent('buy', `<span class="sol">BUY ${sol.toFixed(2)} SOL</span> — ${displayName(wallet)}'s ape powers up!`);
     refreshRank(existing, true);
     return;
   }
   if (monkeys.length >= MAX_MONKEYS){
-    addEvent('sys', `Arena full (${MAX_MONKEYS}) — buy from ${shortWallet(wallet)} ignored`);
+    addEvent('sys', `Arena full (${MAX_MONKEYS}) — buy from ${displayName(wallet)} ignored`);
     return;
   }
   const m = makeMonkey(wallet, sol);
@@ -503,10 +537,11 @@ function spawnBuy(wallet, sol){
   const r = RANKS[m.rank];
   burst(m.x, m.y, `hsl(${m.hue} 60% 55%)`, 18);
   floatText(m.x, m.y - m.size - 14, m.rank >= 4 ? `${r.icon} ${r.name.toUpperCase()} ENTERS!` : 'joins the fight!', r.color);
-  addEvent('buy', `<span class="sol">BUY ${sol.toFixed(2)} SOL</span> — ${r.icon} ${shortWallet(wallet)} enters as ${r.name}! (${Math.round(m.hp)} HP)`);
+  addEvent('buy', `<span class="sol">BUY ${sol.toFixed(2)} SOL</span> — ${r.icon} ${displayName(wallet)} enters as ${r.name}! (${Math.round(m.hp)} HP)`);
 }
 
 function spawnSell(wallet, sol){
+  resolveName(wallet);
   const m = monkeys.find(mk => mk.wallet === wallet);
   const dmg = sol * 100;
   if (m){
@@ -514,11 +549,11 @@ function spawnSell(wallet, sol){
     m.invested = Math.max(0, m.invested - sol);
     m.tenure = 0; // diamond hands bonus resets on any sell
     floatText(m.x, m.y - m.size - 14, `PAPER HANDS -${Math.round(dmg)}`, '#ff5d5d');
-    addEvent('sell', `<span class="neg">SELL ${sol.toFixed(2)} SOL</span> — ${shortWallet(wallet)}'s ape takes ${Math.round(dmg)} paper-hands damage!`);
+    addEvent('sell', `<span class="neg">SELL ${sol.toFixed(2)} SOL</span> — ${displayName(wallet)}'s ape takes ${Math.round(dmg)} paper-hands damage!`);
     refreshRank(m, true);
     if (applyDamage(m, dmg)) killMonkey(m, null, 'sold themselves out');
   } else {
-    addEvent('sell', `<span class="neg">SELL ${sol.toFixed(2)} SOL</span> — ${shortWallet(wallet)} (no ape in arena)`);
+    addEvent('sell', `<span class="neg">SELL ${sol.toFixed(2)} SOL</span> — ${displayName(wallet)} (no ape in arena)`);
   }
 }
 
@@ -1033,7 +1068,8 @@ async function fetchCourt(ca){
       const d = document.createElement('div');
       d.className = 'courtRow';
       const pct = supply > 0 ? (a.amt / supply * 100).toFixed(2) + '%' : '';
-      d.innerHTML = `<span class="title">${COURT_TITLES(i)}</span><span class="wallet">${shortWallet(a.owner)}</span><span class="pct">${pct}</span>`;
+      resolveName(a.owner);
+      d.innerHTML = `<span class="title">${COURT_TITLES(i)}</span><span class="wallet">${displayName(a.owner)}</span><span class="pct">${pct}</span>`;
       el.appendChild(d);
     });
   } catch(e){
