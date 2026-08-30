@@ -3,52 +3,88 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🐵 Monkey Battle Royale</title>
+<title>APEROYAL — your bag sets your rank</title>
 <style>
   :root{
-    --bg:#0b1210; --panel:#111d18; --panel2:#0e1814; --border:#1f3a2d;
-    --text:#d8efe2; --dim:#6f9483; --accent:#39d98a; --gold:#ffd75e;
-    --red:#ff5d5d; --blue:#5db8ff;
+    --bg:#0a0812; --bg2:#0f0b1c; --panel:#141024; --panel2:#0f0b1c; --border:#2a2145;
+    --text:#e8e2f5; --dim:#8d82ab; --accent:#39d98a; --gold:#ffd75e; --gold2:#c9a227;
+    --red:#ff5d5d; --blue:#5db8ff; --purple:#a78bfa;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
   body{
     background:var(--bg); color:var(--text);
     font-family:'Segoe UI', system-ui, sans-serif;
-    height:100vh; display:flex; flex-direction:column; overflow:hidden;
   }
+  /* ---------- header ---------- */
   header{
-    display:flex; align-items:center; gap:12px; padding:10px 16px;
-    background:var(--panel); border-bottom:1px solid var(--border); flex-wrap:wrap;
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; gap:12px; padding:10px 20px;
+    background:rgba(10,8,18,.92); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--border); flex-wrap:wrap;
   }
-  header h1{font-size:18px; letter-spacing:.5px; white-space:nowrap;}
-  header h1 span{color:var(--accent);}
+  header h1{font-size:19px; letter-spacing:2px; white-space:nowrap; font-weight:900;}
+  header h1 .ape{color:var(--gold);}
   #caInput{
-    flex:1; min-width:220px; background:var(--panel2); border:1px solid var(--border);
+    flex:1; min-width:200px; background:var(--panel2); border:1px solid var(--border);
     color:var(--text); padding:8px 12px; border-radius:8px; font-family:monospace; font-size:13px;
   }
-  #caInput:focus{outline:none; border-color:var(--accent);}
+  #caInput:focus{outline:none; border-color:var(--gold);}
   button{
-    background:var(--accent); color:#06130c; border:none; padding:8px 16px;
-    border-radius:8px; font-weight:700; cursor:pointer; font-size:13px;
+    background:var(--gold); color:#241b00; border:none; padding:8px 16px;
+    border-radius:8px; font-weight:800; cursor:pointer; font-size:13px;
   }
   button:hover{filter:brightness(1.1);}
   button.secondary{background:var(--panel2); color:var(--text); border:1px solid var(--border);}
-  button.active-demo{background:var(--gold); color:#3a2b00;}
+  button.active-demo{background:var(--accent); color:#06130c;}
   #status{
     font-size:12px; padding:4px 10px; border-radius:20px;
     background:var(--panel2); border:1px solid var(--border); color:var(--dim); white-space:nowrap;
   }
   #status.live{color:var(--accent); border-color:var(--accent);}
   #status.err{color:var(--red); border-color:var(--red);}
-  main{flex:1; display:flex; min-height:0;}
+  /* ---------- hero ---------- */
+  .hero{
+    padding:72px 24px 56px; text-align:center;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(255,215,94,.10), transparent),
+      radial-gradient(ellipse 60% 50% at 80% 110%, rgba(167,139,250,.08), transparent);
+  }
+  .hero .kicker{
+    font-size:12px; letter-spacing:3px; color:var(--dim); text-transform:uppercase; margin-bottom:18px;
+  }
+  .hero h2{
+    font-size:clamp(38px, 7vw, 74px); line-height:1.02; font-weight:900; letter-spacing:-1px;
+  }
+  .hero h2 .g{color:var(--gold);}
+  .hero p{
+    max-width:620px; margin:22px auto 0; color:var(--dim); font-size:17px; line-height:1.65;
+  }
+  .hero p b{color:var(--text);}
+  .hero .cta{margin-top:30px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;}
+  .hero .cta a{
+    text-decoration:none; padding:12px 26px; border-radius:10px; font-weight:800; font-size:14px;
+  }
+  .hero .cta .primary{background:var(--gold); color:#241b00;}
+  .hero .cta .ghost{border:1px solid var(--border); color:var(--text); background:var(--panel2);}
+  /* ---------- sections ---------- */
+  section{max-width:1180px; margin:0 auto; padding:56px 24px;}
+  .secKicker{font-size:12px; letter-spacing:3px; color:var(--gold2); text-transform:uppercase; margin-bottom:8px;}
+  .secTitle{font-size:clamp(24px, 4vw, 38px); font-weight:900; margin-bottom:28px;}
+  /* ---------- arena ---------- */
+  #arenaSection{padding-top:32px;}
+  .arenaShell{
+    display:flex; height:74vh; min-height:520px; border:1px solid var(--border);
+    border-radius:16px; overflow:hidden; background:var(--panel);
+  }
   #arenaWrap{flex:1; position:relative; min-width:0;}
   canvas{display:block; width:100%; height:100%;}
   #hud{
     position:absolute; top:10px; left:12px; display:flex; gap:10px; align-items:center;
-    font-size:13px; pointer-events:none;
+    font-size:13px; pointer-events:none; flex-wrap:wrap;
   }
   .hudChip{
-    background:rgba(10,20,15,.75); border:1px solid var(--border);
+    background:rgba(10,8,18,.75); border:1px solid var(--border);
     padding:5px 12px; border-radius:20px; backdrop-filter:blur(4px);
   }
   .hudChip b{color:var(--accent);}
@@ -62,14 +98,23 @@
   #banner .big{font-size:42px; font-weight:900; color:var(--gold);}
   #banner .sub{font-size:16px; color:var(--text); font-family:monospace; margin-top:6px;}
   aside{
-    width:290px; background:var(--panel); border-left:1px solid var(--border);
+    width:300px; background:var(--panel); border-left:1px solid var(--border);
     display:flex; flex-direction:column; min-height:0;
   }
-  aside h2{
-    font-size:12px; text-transform:uppercase; letter-spacing:1.5px; color:var(--dim);
+  aside h3{
+    font-size:11px; text-transform:uppercase; letter-spacing:1.5px; color:var(--dim);
     padding:12px 14px 8px;
   }
-  #leaderboard{padding:0 14px 8px; overflow-y:auto; max-height:34%;}
+  #court{padding:0 14px 6px; overflow-y:auto; max-height:30%;}
+  .courtRow{
+    display:flex; align-items:center; gap:8px; font-size:12px; padding:5px 8px;
+    background:var(--panel2); border:1px solid var(--border); border-radius:8px; margin-bottom:5px;
+    font-family:monospace;
+  }
+  .courtRow .title{color:var(--gold); font-weight:700; min-width:64px; font-size:11px;}
+  .courtRow .wallet{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text);}
+  .courtRow .pct{color:var(--dim); white-space:nowrap;}
+  #leaderboard{padding:0 14px 6px; overflow-y:auto; max-height:22%;}
   .champ{
     display:flex; align-items:center; gap:8px; font-size:12px; padding:6px 8px;
     background:var(--panel2); border:1px solid var(--border); border-radius:8px; margin-bottom:6px;
@@ -87,42 +132,184 @@
   @keyframes slideIn{from{opacity:0; transform:translateX(12px);} to{opacity:1;}}
   .evt.buy{border-left-color:var(--accent);}
   .evt.sell{border-left-color:var(--red);}
-  .evt.shield{border-left-color:var(--blue); background:#10202e;}
+  .evt.shield{border-left-color:var(--blue); background:#101a2e;}
   .evt.kill{border-left-color:var(--gold);}
+  .evt.rank{border-left-color:var(--purple); background:#191233;}
   .evt.win{border-left-color:var(--gold); background:#2a2410; color:var(--gold);}
   .evt.sys{border-left-color:var(--blue); color:var(--dim);}
   .evt .sol{color:var(--accent); font-weight:700;}
   .evt .neg{color:var(--red); font-weight:700;}
-  ::-webkit-scrollbar{width:8px;}
+  /* ---------- how it works ---------- */
+  .steps{display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:16px;}
+  .step{
+    background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:26px;
+  }
+  .step .num{font-size:13px; color:var(--gold2); font-weight:800; letter-spacing:2px;}
+  .step h4{font-size:19px; margin:10px 0 10px; font-weight:800;}
+  .step p{color:var(--dim); font-size:14px; line-height:1.65;}
+  .step p b{color:var(--text);}
+  /* ---------- ranks table ---------- */
+  .tableWrap{overflow-x:auto; border:1px solid var(--border); border-radius:14px;}
+  table{width:100%; border-collapse:collapse; font-size:14px; min-width:640px;}
+  th{
+    text-align:left; padding:12px 16px; font-size:11px; letter-spacing:2px; text-transform:uppercase;
+    color:var(--dim); border-bottom:1px solid var(--border); background:var(--panel);
+  }
+  td{padding:13px 16px; border-bottom:1px solid var(--border); background:var(--panel2);}
+  tr:last-child td{border-bottom:none;}
+  td.rankName{font-weight:800;}
+  td .mono{font-family:monospace; color:var(--dim);}
+  .rankNote{color:var(--dim); font-size:13px; margin-top:14px; line-height:1.6; max-width:820px;}
+  .rankNote b{color:var(--text);}
+  /* ---------- war chest ---------- */
+  .chest{
+    background:linear-gradient(135deg, rgba(255,215,94,.07), rgba(167,139,250,.06));
+    border:1px solid var(--gold2); border-radius:16px; padding:34px;
+  }
+  .chest h4{font-size:22px; font-weight:900; margin-bottom:12px;}
+  .chest p{color:var(--dim); font-size:15px; line-height:1.7; max-width:800px;}
+  .chest p b{color:var(--gold);}
+  /* ---------- straight talk ---------- */
+  .talk{display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:16px;}
+  .talkCard{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:22px;}
+  .talkCard h5{font-size:15px; margin-bottom:8px; font-weight:800;}
+  .talkCard p{color:var(--dim); font-size:13px; line-height:1.65;}
+  footer{
+    border-top:1px solid var(--border); padding:28px 24px; text-align:center;
+    color:var(--dim); font-size:13px; font-family:monospace;
+  }
+  footer .ca{color:var(--gold);}
+  ::-webkit-scrollbar{width:8px; height:8px;}
   ::-webkit-scrollbar-thumb{background:var(--border); border-radius:4px;}
-  @media(max-width:820px){ aside{display:none;} }
+  @media(max-width:860px){ aside{display:none;} }
 </style>
 </head>
 <body>
+
 <header>
-  <h1>🐵 MONKEY <span>BATTLE ROYALE</span></h1>
+  <h1>🐵 <span class="ape">APE</span>ROYAL</h1>
   <input id="caInput" placeholder="Paste a pump.fun contract address (CA)..." spellcheck="false">
   <button id="connectBtn">Connect</button>
   <button id="demoBtn" class="secondary">Demo Mode</button>
   <div id="status">● offline</div>
 </header>
-<main>
-  <div id="arenaWrap">
-    <canvas id="arena"></canvas>
-    <div id="hud">
-      <div class="hudChip">🐒 Fighters: <b id="popCount">0</b></div>
-      <div class="hudChip" id="roundTimer">⏱ Round: <b id="timerVal">5:00</b></div>
-      <div class="hudChip">💥 Kills: <b id="killCount">0</b></div>
-    </div>
-    <div id="banner"><div class="big"></div><div class="sub"></div></div>
+
+<div class="hero">
+  <div class="kicker">Buy-to-spawn battle arena · pump.fun · Solana</div>
+  <h2>YOUR BAG<br>SETS YOUR <span class="g">RANK.</span></h2>
+  <p>Every buy releases an ape into the arena. The more you hold, the higher your ape climbs the royal ladder — from <b>Peasant</b> to <b>King Ape</b>. Higher ranks hit harder, heal faster, and wear the crown in front of everyone watching. Sell, and your title is stripped on the spot.</p>
+  <div class="cta">
+    <a class="primary" href="#arenaSection">⚔️ Watch the arena</a>
+    <a class="ghost" href="#how">How it works</a>
   </div>
-  <aside>
-    <h2>🏆 Champions</h2>
-    <div id="leaderboard"></div>
-    <h2>📡 Live Feed</h2>
-    <div id="feed"></div>
-  </aside>
-</main>
+</div>
+
+<section id="arenaSection">
+  <div class="secKicker">Live</div>
+  <div class="secTitle">The Arena</div>
+  <div class="arenaShell">
+    <div id="arenaWrap">
+      <canvas id="arena"></canvas>
+      <div id="hud">
+        <div class="hudChip">🐒 Fighters: <b id="popCount">0</b></div>
+        <div class="hudChip" id="roundTimer">⏱ Round: <b id="timerVal">5:00</b></div>
+        <div class="hudChip">💥 Kills: <b id="killCount">0</b></div>
+      </div>
+      <div id="banner"><div class="big"></div><div class="sub"></div></div>
+    </div>
+    <aside>
+      <h3>👑 The Royal Court · top holders on-chain</h3>
+      <div id="court"><div class="evt sys">Connect a coin to summon the Royal Court</div></div>
+      <h3>🏆 Arena Champions</h3>
+      <div id="leaderboard"></div>
+      <h3>📡 Live Feed</h3>
+      <div id="feed"></div>
+    </aside>
+  </div>
+</section>
+
+<section id="how">
+  <div class="secKicker">The loop</div>
+  <div class="secTitle">Buy. Fight. Climb.</div>
+  <div class="steps">
+    <div class="step">
+      <div class="num">01</div>
+      <h4>BUY THE COIN</h4>
+      <p>The moment your buy lands on pump.fun, your ape drops into the arena — live, armed, and named after your wallet. <b>Buy size sets its starting HP and how big it walks in.</b></p>
+    </div>
+    <div class="step">
+      <div class="num">02</div>
+      <h4>YOUR APE FIGHTS</h4>
+      <p>Apes battle around the clock while the page is open. Every kill earns <b>valor</b> — and valor counts toward your next promotion, so a small bag with big kills still climbs.</p>
+    </div>
+    <div class="step">
+      <div class="num">03</div>
+      <h4>RANK UP, RULE THE COURT</h4>
+      <p>Your total buys plus valor set your rank: more damage, faster healing, capes and crowns. The biggest holders on-chain sit in the <b>Royal Court</b> for everyone to see. Selling demotes you instantly.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ranks">
+  <div class="secKicker">The ladder</div>
+  <div class="secTitle">The Seven Ranks</div>
+  <div class="tableWrap">
+    <table>
+      <thead>
+        <tr><th>Rank</th><th>Total bought</th><th>Damage</th><th>Healing</th><th>Regalia</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="rankName">🐒 Peasant</td><td class="mono">any buy</td><td>1.0×</td><td>—</td><td>joins the arena</td></tr>
+        <tr><td class="rankName">🗡 Squire</td><td class="mono">0.25 SOL</td><td>1.05×</td><td>0.5 HP/s</td><td>—</td></tr>
+        <tr><td class="rankName">⚔️ Knight</td><td class="mono">0.75 SOL</td><td>1.15×</td><td>1.0 HP/s</td><td>—</td></tr>
+        <tr><td class="rankName">🛡 Baron</td><td class="mono">1.5 SOL</td><td>1.25×</td><td>1.5 HP/s</td><td>—</td></tr>
+        <tr><td class="rankName">🏰 Duke</td><td class="mono">2.5 SOL</td><td>1.4×</td><td>2.0 HP/s</td><td>royal cape</td></tr>
+        <tr><td class="rankName">💎 Prince</td><td class="mono">4 SOL</td><td>1.55×</td><td>3.0 HP/s</td><td>cape + circlet</td></tr>
+        <tr><td class="rankName">👑 King Ape</td><td class="mono">6 SOL</td><td>1.7×</td><td>4.0 HP/s</td><td>crown, cape & golden aura</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="rankNote">
+    <b>Earn it or buy it.</b> Every arena kill adds valor worth <span style="font-family:monospace">0.15 SOL</span> toward your rank, so a fighter can out-rank a bigger bag. <b>Selling subtracts</b> the sold amount from your total — sell enough and the crown comes off mid-fight, in front of everyone. Diamond hands heal: the longer your ape survives without you selling, the stronger its regeneration gets (up to 2× after 10 minutes).
+  </p>
+</section>
+
+<section id="chest">
+  <div class="secKicker">Why hold</div>
+  <div class="secTitle">The War Chest</div>
+  <div class="chest">
+    <h4>💰 Creator fees flow back to the kingdom.</h4>
+    <p>Every pump.fun trade pays the coin's creator a fee. The Aperoyal war chest pledge: <b>a share of creator fees funds prizes for the arena</b> — weekly drops to the top killers on the champions board and the highest lords of the Royal Court. The exact split and schedule are posted in the community channels before each round. No contracts, no lockups, no promises of profit — just the dev putting trading fees back into the game that drives them.</p>
+  </div>
+</section>
+
+<section id="talk">
+  <div class="secKicker">Straight talk</div>
+  <div class="secTitle">Read this before you ape</div>
+  <div class="talk">
+    <div class="talkCard">
+      <h5>This is a memecoin.</h5>
+      <p>Aperoyal is a game layered on a pump.fun token. Ranks, capes and crowns are cosmetic and social — they are not equity, yield, or a claim on anything. Never spend what you can't afford to lose.</p>
+    </div>
+    <div class="talkCard">
+      <h5>The arena sees what it sees.</h5>
+      <p>Fights and ranks are computed from the live trade feed while the page is open. The Royal Court is real on-chain holder data, refreshed about every 90 seconds from a public Solana RPC — if the RPC is busy, the court may lag.</p>
+    </div>
+    <div class="talkCard">
+      <h5>War chest is a pledge, not a contract.</h5>
+      <p>Prize drops come from creator fees at the dev's discretion, announced in community channels. There is no smart contract enforcing them.</p>
+    </div>
+    <div class="talkCard">
+      <h5>Champions are per-browser for now.</h5>
+      <p>The arena champions list is stored in your own browser. The Royal Court, however, is the same for everyone — it's read from the blockchain itself.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div id="footerCa">CA: <span class="ca">not set — launching soon</span></div>
+  <div style="margin-top:8px">APEROYAL · the arena never sleeps 🍌</div>
+</footer>
 
 <script>
 'use strict';
@@ -135,20 +322,33 @@ const MY_COIN_CA = '';
 const ROUND_MS = 5 * 60 * 1000;
 const MAX_MONKEYS = 60;
 const WS_URL = 'wss://pumpportal.fun/api/data';
+const RPC_URL = 'https://api.mainnet-beta.solana.com';
+const VALOR_PER_KILL = 0.15;   // SOL-equivalent rank credit per kill
+
+const RANKS = [
+  { name:'Peasant',  icon:'🐒', need:0,    dmg:1.0,  regen:0,   color:'#8d82ab' },
+  { name:'Squire',   icon:'🗡', need:0.25, dmg:1.05, regen:0.5, color:'#b9c4d0' },
+  { name:'Knight',   icon:'⚔️', need:0.75, dmg:1.15, regen:1.0, color:'#5db8ff' },
+  { name:'Baron',    icon:'🛡', need:1.5,  dmg:1.25, regen:1.5, color:'#39d98a' },
+  { name:'Duke',     icon:'🏰', need:2.5,  dmg:1.4,  regen:2.0, color:'#a78bfa' },
+  { name:'Prince',   icon:'💎', need:4,    dmg:1.55, regen:3.0, color:'#ff8fd0' },
+  { name:'King Ape', icon:'👑', need:6,    dmg:1.7,  regen:4.0, color:'#ffd75e' },
+];
 
 /* ============ STATE ============ */
 const canvas = document.getElementById('arena');
 const ctx = canvas.getContext('2d');
 let W = 0, H = 0;
-let monkeys = [];        // living fighters
-let bananas = [];        // projectiles
-let particles = [];      // fx
-let floaters = [];       // floating text
+let monkeys = [];
+let bananas = [];
+let particles = [];
+let floaters = [];
 let roundEndsAt = Date.now() + ROUND_MS;
 let roundHadBattle = false;
 let totalKills = 0;
 let ws = null, wsAlive = false, subscribedCA = null;
 let demoTimer = null;
+let courtTimer = null;
 let champions = [];
 try { champions = JSON.parse(localStorage.getItem('mbr_champs') || '[]'); } catch(e){}
 
@@ -157,6 +357,11 @@ function hashStr(s){ let h = 2166136261; for(let i=0;i<s.length;i++){ h ^= s.cha
 function shortWallet(w){ return w.length > 10 ? w.slice(0,4) + '..' + w.slice(-4) : w; }
 function rand(a,b){ return a + Math.random()*(b-a); }
 function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy); }
+function rankIndex(score){
+  let idx = 0;
+  for (let i = 0; i < RANKS.length; i++) if (score >= RANKS[i].need) idx = i;
+  return idx;
+}
 
 function resize(){
   const r = canvas.parentElement.getBoundingClientRect();
@@ -174,24 +379,16 @@ function makeGrass(){
   const n = Math.floor((W * H) / 7000);
   for (let i = 0; i < n; i++){
     const y = rand(70, H);
-    const depth = 0.55 + 0.45 * (y / H);   // farther back = smaller & dimmer
+    const depth = 0.55 + 0.45 * (y / H);
     const blades = [];
     const bn = 4 + Math.floor(Math.random() * 4);
     for (let b = 0; b < bn; b++){
-      blades.push({
-        a: rand(-0.6, 0.6),
-        len: rand(8, 20) * depth,
-        w: rand(1, 2.4) * depth,
-        bend: rand(3, 8)
-      });
+      blades.push({ a: rand(-0.6, 0.6), len: rand(8, 20) * depth, w: rand(1, 2.4) * depth, bend: rand(3, 8) });
     }
     grassTufts.push({
       x: rand(0, W), y,
-      hue: 138 + rand(-14, 16),
-      sat: rand(35, 55),
-      light: rand(20, 34) * depth,
-      phase: rand(0, Math.PI * 2),
-      depth, blades
+      hue: 138 + rand(-14, 16), sat: rand(35, 55), light: rand(20, 34) * depth,
+      phase: rand(0, Math.PI * 2), depth, blades
     });
   }
   grassTufts.sort((a, b) => a.y - b.y);
@@ -200,7 +397,6 @@ function makeGrass(){
   }
 }
 function drawGrass(t){
-  // dirt patches under the grass
   ctx.fillStyle = 'rgba(40,32,20,0.22)';
   for (const p of dirtPatches){
     ctx.beginPath(); ctx.ellipse(p.x, p.y, p.rx, p.ry, p.rot, 0, Math.PI * 2); ctx.fill();
@@ -215,12 +411,8 @@ function drawGrass(t){
       const cy = g.y - Math.cos(b.a) * b.len * 0.55;
       ctx.strokeStyle = `hsl(${g.hue} ${g.sat}% ${g.light}%)`;
       ctx.lineWidth = b.w;
-      ctx.beginPath();
-      ctx.moveTo(g.x, g.y);
-      ctx.quadraticCurveTo(cx, cy, tipX, tipY);
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(g.x, g.y); ctx.quadraticCurveTo(cx, cy, tipX, tipY); ctx.stroke();
     }
-    // tiny lighter core blade for depth
     ctx.strokeStyle = `hsl(${g.hue} ${g.sat + 10}% ${Math.min(50, g.light + 12)}%)`;
     ctx.lineWidth = 1 * g.depth;
     ctx.beginPath();
@@ -231,13 +423,12 @@ function drawGrass(t){
 }
 
 /* ============ MONKEY ============ */
-const HATS = ['none','none','bandana','leaf','flower','headband','crown'];
+const HATS = ['none','none','bandana','leaf','flower','headband'];
 function makeMonkey(wallet, solAmount){
   const h = hashStr(wallet);
   const hue = h % 360;
-  const isWhale = solAmount >= 2;
   const hp = Math.min(40 + solAmount * 120, 900);
-  return {
+  const m = {
     wallet, name: shortWallet(wallet),
     x: rand(60, W-60), y: rand(80, H-60),
     vx: 0, vy: 0,
@@ -245,31 +436,55 @@ function makeMonkey(wallet, solAmount){
     size: Math.min(16 + solAmount * 9, 42),
     hue,
     furLight: 30 + (h >> 8) % 20,
-    hat: isWhale ? 'crown' : HATS[(h >> 4) % HATS.length],
+    hat: HATS[(h >> 4) % HATS.length],
     kills: 0,
     cooldown: rand(500, 2000),
     wanderA: rand(0, Math.PI*2),
     bobT: rand(0, 10),
-    face: (h >> 12) % 3,  // 0 chill, 1 angry, 2 derp
+    face: (h >> 12) % 3,
     flash: 0,
     aimA: rand(-0.4, 0.4),
     muzzle: 0,
     shield: 0,
-    invested: solAmount
+    invested: solAmount,
+    valor: 0,
+    rank: 0,
+    tenure: 0
   };
+  m.rank = rankIndex(m.invested);
+  return m;
+}
+
+function rankScore(m){ return m.invested + m.valor; }
+
+function refreshRank(m, announce){
+  const newRank = rankIndex(rankScore(m));
+  if (newRank === m.rank) return;
+  const up = newRank > m.rank;
+  const r = RANKS[newRank];
+  m.rank = newRank;
+  if (!announce) return;
+  if (up){
+    burst(m.x, m.y - m.size * 0.5, r.color, 22);
+    floatText(m.x, m.y - m.size - 16, `${r.icon} promoted to ${r.name}!`, r.color);
+    addEvent('rank', `${r.icon} ${m.name} has been promoted to <b style="color:${r.color}">${r.name}</b>!`);
+  } else {
+    floatText(m.x, m.y - m.size - 16, `stripped of title!`, '#ff5d5d');
+    addEvent('rank', `📉 ${m.name} was demoted to ${r.icon} ${r.name} — the court remembers.`);
+  }
 }
 
 function spawnBuy(wallet, sol){
   const existing = monkeys.find(m => m.wallet === wallet);
   if (existing){
-    // re-buy: heal + grow
     const heal = sol * 120;
     existing.hp = Math.min(existing.hp + heal, existing.maxHp + heal);
     existing.maxHp = Math.max(existing.maxHp, existing.hp);
     existing.size = Math.min(existing.size + sol * 4, 46);
     existing.invested += sol;
     floatText(existing.x, existing.y - existing.size - 14, `+${Math.round(heal)} HP`, '#39d98a');
-    addEvent('buy', `<span class="sol">BUY ${sol.toFixed(2)} SOL</span> — ${shortWallet(wallet)}'s monkey powers up!`);
+    addEvent('buy', `<span class="sol">BUY ${sol.toFixed(2)} SOL</span> — ${shortWallet(wallet)}'s ape powers up!`);
+    refreshRank(existing, true);
     return;
   }
   if (monkeys.length >= MAX_MONKEYS){
@@ -278,9 +493,10 @@ function spawnBuy(wallet, sol){
   }
   const m = makeMonkey(wallet, sol);
   monkeys.push(m);
+  const r = RANKS[m.rank];
   burst(m.x, m.y, `hsl(${m.hue} 60% 55%)`, 18);
-  floatText(m.x, m.y - m.size - 14, sol >= 2 ? '🦍 WHALE ENTERS!' : 'joins the fight!', sol >= 2 ? '#ffd75e' : '#d8efe2');
-  addEvent('buy', `<span class="sol">BUY ${sol.toFixed(2)} SOL</span> — 🐒 ${shortWallet(wallet)} enters the arena! (${Math.round(m.hp)} HP)`);
+  floatText(m.x, m.y - m.size - 14, m.rank >= 4 ? `${r.icon} ${r.name.toUpperCase()} ENTERS!` : 'joins the fight!', r.color);
+  addEvent('buy', `<span class="sol">BUY ${sol.toFixed(2)} SOL</span> — ${r.icon} ${shortWallet(wallet)} enters as ${r.name}! (${Math.round(m.hp)} HP)`);
 }
 
 function spawnSell(wallet, sol){
@@ -288,11 +504,14 @@ function spawnSell(wallet, sol){
   const dmg = sol * 100;
   if (m){
     m.flash = 8;
+    m.invested = Math.max(0, m.invested - sol);
+    m.tenure = 0; // diamond hands bonus resets on any sell
     floatText(m.x, m.y - m.size - 14, `PAPER HANDS -${Math.round(dmg)}`, '#ff5d5d');
-    addEvent('sell', `<span class="neg">SELL ${sol.toFixed(2)} SOL</span> — ${shortWallet(wallet)}'s monkey takes ${Math.round(dmg)} paper-hands damage!`);
+    addEvent('sell', `<span class="neg">SELL ${sol.toFixed(2)} SOL</span> — ${shortWallet(wallet)}'s ape takes ${Math.round(dmg)} paper-hands damage!`);
+    refreshRank(m, true);
     if (applyDamage(m, dmg)) killMonkey(m, null, 'sold themselves out');
   } else {
-    addEvent('sell', `<span class="neg">SELL ${sol.toFixed(2)} SOL</span> — ${shortWallet(wallet)} (no monkey in arena)`);
+    addEvent('sell', `<span class="neg">SELL ${sol.toFixed(2)} SOL</span> — ${shortWallet(wallet)} (no ape in arena)`);
   }
 }
 
@@ -313,15 +532,13 @@ function grantShield(query, amount, reason){
   const q = (query || '').trim().toLowerCase();
   if (!q) return false;
   const m = monkeys.find(mk => mk.wallet.toLowerCase().startsWith(q) || mk.name.toLowerCase().includes(q));
-  if (!m){ addEvent('sys', `Shield grant failed — no monkey matching "${query}"`); return false; }
+  if (!m){ addEvent('sys', `Shield grant failed — no ape matching "${query}"`); return false; }
   m.shield += amount;
   burst(m.x, m.y - m.size * 0.4, '#5db8ff', 20);
   floatText(m.x, m.y - m.size - 14, '🛡 SHILL SHIELD!', '#5db8ff');
   addEvent('shield', `🛡 ${m.name} ${reason || 'called out the token'} — +${amount} shield!`);
   return true;
 }
-
-// Press G to reward a shiller: type part of their wallet, their monkey gets a shield
 window.addEventListener('keydown', e => {
   if (e.key.toLowerCase() === 'g' && document.activeElement.tagName !== 'INPUT'){
     const q = window.prompt('🛡 Grant shill shield — enter the start of the wallet address:');
@@ -335,8 +552,10 @@ function killMonkey(m, killer, how){
   floatText(m.x, m.y, '💀', '#fff');
   if (killer){
     killer.kills++;
+    killer.valor += VALOR_PER_KILL;
     totalKills++;
     addEvent('kill', `💥 ${killer.name} eliminated ${m.name}! (${killer.kills} kills)`);
+    refreshRank(killer, true);
   } else {
     addEvent('kill', `💀 ${m.name} ${how || 'was eliminated'}`);
   }
@@ -345,7 +564,7 @@ function killMonkey(m, killer, how){
 
 /* ============ ROUND / VICTORY ============ */
 function checkVictory(){
-  if (roundHadBattle && monkeys.length === 1) declareWinner(monkeys[0], 'LAST MONKEY STANDING');
+  if (roundHadBattle && monkeys.length === 1) declareWinner(monkeys[0], 'LAST APE STANDING');
 }
 function declareWinner(m, label){
   showBanner('🏆 ' + label, `${m.name} · ${m.kills} kills`);
@@ -354,7 +573,6 @@ function declareWinner(m, label){
   champions = champions.slice(0, 12);
   try { localStorage.setItem('mbr_champs', JSON.stringify(champions)); } catch(e){}
   renderChamps();
-  // champion stays, fully healed, ready for challengers
   m.hp = m.maxHp;
   m.kills = 0;
   roundHadBattle = false;
@@ -364,7 +582,7 @@ function endRoundByTimer(){
   if (monkeys.length >= 2){
     const lead = [...monkeys].sort((a,b) => b.kills - a.kills || b.hp - a.hp)[0];
     declareWinner(lead, 'ROUND CHAMPION');
-    monkeys.forEach(mk => mk.hp = mk.maxHp); // everyone heals for next round
+    monkeys.forEach(mk => mk.hp = mk.maxHp);
   } else {
     roundEndsAt = Date.now() + ROUND_MS;
   }
@@ -393,7 +611,6 @@ function floatText(x, y, text, color){
 /* ============ SIM ============ */
 function update(){
   const now = Date.now();
-  // fight only when 2+
   const fighting = monkeys.length >= 2;
   if (fighting) roundHadBattle = true;
 
@@ -401,7 +618,13 @@ function update(){
     m.bobT += 0.1;
     if (m.flash > 0) m.flash--;
     if (m.muzzle > 0) m.muzzle--;
-    // find target
+    // rank regen, doubled by diamond-hands tenure (caps at 2x after 10 min)
+    m.tenure += 1/60;
+    const rk = RANKS[m.rank];
+    if (rk.regen > 0 && m.hp < m.maxHp){
+      const tenureMult = 1 + Math.min(m.tenure / 600, 1);
+      m.hp = Math.min(m.maxHp, m.hp + rk.regen * tenureMult / 60);
+    }
     let target = null, best = Infinity;
     for (const o of monkeys){
       if (o === m) continue;
@@ -411,38 +634,33 @@ function update(){
     if (target){
       const desired = 130 + m.size * 2;
       const dx = target.x - m.x, dy = target.y - m.y, d = Math.hypot(dx,dy) || 1;
-      // circle-strafe toward preferred range
       const push = (d - desired) * 0.0022;
       m.vx += (dx/d) * push + Math.cos(m.wanderA) * 0.06;
       m.vy += (dy/d) * push + Math.sin(m.wanderA) * 0.06;
       m.wanderA += rand(-0.3, 0.3);
       m.aimA = Math.atan2(dy, dx);
-      // fire the banana gun
       m.cooldown -= 16.6;
       if (m.cooldown <= 0 && d < 420){
         m.cooldown = rand(1100, 2400);
         m.muzzle = 5;
         const sp = 5.5;
-        const lead = 8; // slight aim lead
+        const lead = 8;
         const tx = target.x + target.vx * lead, ty = target.y + target.vy * lead;
         const adx = tx - m.x, ady = ty - m.y, ad = Math.hypot(adx, ady) || 1;
         const bx = m.x + (adx/ad) * (m.size * 0.9 + 10);
         const by = m.y + m.size * 0.1 + (ady/ad) * (m.size * 0.9 + 10);
         bananas.push({ x:bx, y:by, vx:adx/ad*sp, vy:ady/ad*sp - 0.3, owner:m, spin:0, life:140 });
       }
-      // melee bump
       if (d < m.size + target.size){
-        if (applyDamage(target, 0.35)) killMonkey(target, m);
+        if (applyDamage(target, 0.35 * RANKS[m.rank].dmg)) killMonkey(target, m);
       }
     } else {
-      // idle wander
       m.wanderA += rand(-0.2, 0.2);
       m.vx += Math.cos(m.wanderA) * 0.04;
       m.vy += Math.sin(m.wanderA) * 0.04;
     }
     m.vx *= 0.92; m.vy *= 0.92;
     m.x += m.vx; m.y += m.vy;
-    // walls
     const pad = m.size + 6;
     if (m.x < pad){ m.x = pad; m.vx = Math.abs(m.vx); }
     if (m.x > W - pad){ m.x = W - pad; m.vx = -Math.abs(m.vx); }
@@ -450,13 +668,12 @@ function update(){
     if (m.y > H - pad){ m.y = H - pad; m.vy = -Math.abs(m.vy); }
   }
 
-  // bananas
   for (const b of bananas){
     b.x += b.vx; b.y += b.vy; b.vy += 0.015; b.spin += 0.3; b.life--;
     for (const m of monkeys){
       if (m === b.owner) continue;
       if (dist(b, m) < m.size + 6){
-        const dmg = rand(8, 16) * (1 + b.owner.size / 60);
+        const dmg = rand(8, 16) * (1 + b.owner.size / 60) * RANKS[b.owner.rank].dmg;
         m.flash = 6;
         m.vx += b.vx * 0.35; m.vy += b.vy * 0.35;
         burst(b.x, b.y, '#ffd75e', 6);
@@ -468,16 +685,13 @@ function update(){
   }
   bananas = bananas.filter(b => b.life > 0 && b.x > -20 && b.x < W+20 && b.y < H+20);
 
-  // fx
   for (const p of particles){ p.x += p.vx; p.y += p.vy; p.vy += 0.08; p.life--; }
   particles = particles.filter(p => p.life > 0);
   for (const f of floaters){ f.y -= 0.7; f.life--; }
   floaters = floaters.filter(f => f.life > 0);
 
-  // round timer
   if (now >= roundEndsAt) endRoundByTimer();
 
-  // HUD
   document.getElementById('popCount').textContent = monkeys.length;
   document.getElementById('killCount').textContent = totalKills;
   const remain = Math.max(0, roundEndsAt - now);
@@ -487,11 +701,9 @@ function update(){
 
 /* ============ RENDER ============ */
 function drawJungle(){
-  // sky gradient
   const g = ctx.createLinearGradient(0,0,0,H);
   g.addColorStop(0,'#0d1f16'); g.addColorStop(1,'#123324');
   ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
-  // distant canopy blobs
   ctx.globalAlpha = 0.25;
   for(let i=0;i<7;i++){
     const x = (i*0.147*W*2.3) % W, r = 60 + (i*53)%90;
@@ -499,9 +711,7 @@ function drawJungle(){
     ctx.beginPath(); ctx.arc(x, 30 + (i*37)%60, r, 0, Math.PI*2); ctx.fill();
   }
   ctx.globalAlpha = 1;
-  // grass field
   drawGrass(Date.now());
-  // vines
   ctx.strokeStyle = '#1d5238'; ctx.lineWidth = 3;
   for(let i=0;i<5;i++){
     const x = (i+0.5)*W/5 + Math.sin(Date.now()/2000 + i)*8;
@@ -514,10 +724,33 @@ function drawJungle(){
 function drawMonkey(m){
   const {x, y, size:s} = m;
   const bob = Math.sin(m.bobT) * 2;
+  const rk = RANKS[m.rank];
   ctx.save();
   ctx.translate(x, y + bob);
+  // King Ape golden aura
+  if (m.rank === RANKS.length - 1){
+    const pulse = 0.9 + Math.sin(m.bobT * 1.5) * 0.1;
+    const ag = ctx.createRadialGradient(0, -s*0.15, s*0.3, 0, -s*0.15, s*1.6*pulse);
+    ag.addColorStop(0, 'rgba(255,215,94,.22)');
+    ag.addColorStop(1, 'rgba(255,215,94,0)');
+    ctx.fillStyle = ag;
+    ctx.beginPath(); ctx.arc(0, -s*0.15, s*1.6*pulse, 0, Math.PI*2); ctx.fill();
+  }
   const fur = m.flash > 0 ? '#ffffff' : `hsl(${m.hue} 45% ${m.furLight}%)`;
   const belly = `hsl(${m.hue} 40% ${m.furLight + 25}%)`;
+  // royal cape for Duke and above
+  if (m.rank >= 4){
+    const capeColor = m.rank === 6 ? '#8b0e2f' : m.rank === 5 ? '#5b2a86' : '#28418f';
+    ctx.fillStyle = capeColor;
+    ctx.beginPath();
+    ctx.moveTo(-s*0.55, -s*0.35);
+    ctx.quadraticCurveTo(-s*1.05, s*0.5 + Math.sin(m.bobT*0.8)*3, -s*0.65, s*0.95);
+    ctx.lineTo(s*0.65, s*0.95);
+    ctx.quadraticCurveTo(s*1.05, s*0.5 - Math.sin(m.bobT*0.8)*3, s*0.55, -s*0.35);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#ffd75e'; ctx.lineWidth = Math.max(1.5, s*0.05);
+    ctx.stroke();
+  }
   // tail
   ctx.strokeStyle = fur; ctx.lineWidth = Math.max(3, s*0.16); ctx.lineCap = 'round';
   ctx.beginPath();
@@ -549,23 +782,22 @@ function drawMonkey(m){
   // eyes
   ctx.fillStyle = '#111';
   const eyeY = -s*0.58;
-  if (m.face === 1){ // angry brows
+  if (m.face === 1){
     ctx.strokeStyle = '#111'; ctx.lineWidth = Math.max(2, s*0.08);
     ctx.beginPath(); ctx.moveTo(-s*0.28, eyeY - s*0.14); ctx.lineTo(-s*0.08, eyeY - s*0.05); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(s*0.28, eyeY - s*0.14); ctx.lineTo(s*0.08, eyeY - s*0.05); ctx.stroke();
   }
   ctx.beginPath(); ctx.arc(-s*0.18, eyeY, s*(m.face===2?0.1:0.07), 0, Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.arc(s*0.18, eyeY, s*0.07, 0, Math.PI*2); ctx.fill();
-  // nostrils + mouth
   ctx.beginPath(); ctx.arc(-s*0.07, -s*0.4, s*0.03, 0, Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.arc(s*0.07, -s*0.4, s*0.03, 0, Math.PI*2); ctx.fill();
   ctx.strokeStyle = '#111'; ctx.lineWidth = Math.max(1.5, s*0.05);
   ctx.beginPath(); ctx.arc(0, -s*0.32, s*0.14, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke();
-  // hat
-  drawHat(m, s);
-  // banana gun, aimed at current target
+  // regalia: crown for King, circlet for Prince, else cosmetic hat
+  if (m.rank === 6) drawCrown(s);
+  else if (m.rank === 5) drawCirclet(s);
+  else drawHat(m, s);
   drawGun(m, s);
-  // shill shield bubble
   if (m.shield > 0){
     const pulse = 1 + Math.sin(m.bobT * 2) * 0.04;
     ctx.strokeStyle = 'rgba(93,184,255,.75)';
@@ -575,10 +807,13 @@ function drawMonkey(m){
     ctx.fill(); ctx.stroke();
   }
   ctx.restore();
-  // name + HP bar (unrotated)
+  // rank tag + name + bars
   ctx.textAlign = 'center';
+  ctx.font = `${Math.max(9, s*0.3)}px monospace`;
+  ctx.fillStyle = rk.color;
+  ctx.fillText(`${rk.icon} ${rk.name}`, x, y - s*1.35 - 24 + bob);
   ctx.font = `${Math.max(10, s*0.38)}px monospace`;
-  ctx.fillStyle = 'rgba(216,239,226,.85)';
+  ctx.fillStyle = 'rgba(232,226,245,.85)';
   ctx.fillText(m.name, x, y - s*1.35 - 12 + bob);
   const bw = s * 1.6, bh = 4;
   ctx.fillStyle = 'rgba(0,0,0,.5)';
@@ -593,30 +828,42 @@ function drawMonkey(m){
   }
 }
 
+function drawCrown(s){
+  const y0 = -s*0.95;
+  ctx.fillStyle = '#ffd75e';
+  ctx.beginPath();
+  ctx.moveTo(-s*0.38, y0); ctx.lineTo(-s*0.38, y0 - s*0.34); ctx.lineTo(-s*0.19, y0 - s*0.14);
+  ctx.lineTo(0, y0 - s*0.38); ctx.lineTo(s*0.19, y0 - s*0.14); ctx.lineTo(s*0.38, y0 - s*0.34);
+  ctx.lineTo(s*0.38, y0); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#ff5d5d';
+  ctx.beginPath(); ctx.arc(0, y0 - s*0.06, s*0.06, 0, Math.PI*2); ctx.fill();
+}
+function drawCirclet(s){
+  const y0 = -s*0.92;
+  ctx.strokeStyle = '#ffd75e'; ctx.lineWidth = Math.max(2, s*0.07);
+  ctx.beginPath(); ctx.ellipse(0, y0, s*0.42, s*0.12, 0, Math.PI, 0); ctx.stroke();
+  ctx.fillStyle = '#ff8fd0';
+  ctx.beginPath(); ctx.arc(0, y0 - s*0.1, s*0.06, 0, Math.PI*2); ctx.fill();
+}
+
 function drawGun(m, s){
   const aim = m.aimA || 0;
   ctx.save();
-  // held at the end of the target-side arm
   ctx.translate(Math.cos(aim) * s * 0.7, s * 0.1 + Math.sin(aim) * s * 0.35);
   ctx.rotate(aim);
-  if (Math.cos(aim) < 0) ctx.scale(1, -1);   // keep the grip pointing down when aiming left
-  const gs = Math.max(0.7, s / 26);          // gun scale
-  // grip
+  if (Math.cos(aim) < 0) ctx.scale(1, -1);
+  const gs = Math.max(0.7, s / 26);
   ctx.fillStyle = '#4a3421';
   ctx.save(); ctx.translate(3*gs, 2*gs); ctx.rotate(0.35); ctx.fillRect(-2*gs, 0, 5*gs, 9*gs); ctx.restore();
-  // slide / body
   ctx.fillStyle = '#23272b';
   ctx.fillRect(0, -3*gs, 16*gs, 6*gs);
   ctx.fillStyle = '#3a4046';
   ctx.fillRect(0, -3*gs, 16*gs, 2.4*gs);
-  // barrel tip
   ctx.fillStyle = '#151719';
   ctx.fillRect(16*gs, -2*gs, 3*gs, 3*gs);
-  // banana clip
   ctx.strokeStyle = '#ffd75e';
   ctx.lineWidth = 2.6*gs;
   ctx.beginPath(); ctx.arc(8*gs, 6*gs, 4.5*gs, 0.15*Math.PI, 0.9*Math.PI); ctx.stroke();
-  // muzzle flash
   if (m.muzzle > 0){
     const f = m.muzzle / 5;
     ctx.fillStyle = `rgba(255,236,138,${0.9*f})`;
@@ -635,13 +882,6 @@ function drawGun(m, s){
 function drawHat(m, s){
   const y0 = -s*0.95;
   switch(m.hat){
-    case 'crown':
-      ctx.fillStyle = '#ffd75e';
-      ctx.beginPath();
-      ctx.moveTo(-s*0.35, y0); ctx.lineTo(-s*0.35, y0 - s*0.3); ctx.lineTo(-s*0.17, y0 - s*0.12);
-      ctx.lineTo(0, y0 - s*0.34); ctx.lineTo(s*0.17, y0 - s*0.12); ctx.lineTo(s*0.35, y0 - s*0.3);
-      ctx.lineTo(s*0.35, y0); ctx.closePath(); ctx.fill();
-      break;
     case 'bandana':
       ctx.fillStyle = '#ff5d5d';
       ctx.beginPath(); ctx.ellipse(0, y0 + s*0.08, s*0.5, s*0.16, 0, Math.PI, 0); ctx.fill();
@@ -678,7 +918,6 @@ function drawBanana(b){
 
 function render(){
   drawJungle();
-  // sort by y for painter's order
   const sorted = [...monkeys].sort((a,b) => a.y - b.y);
   for (const m of sorted) drawMonkey(m);
   for (const b of bananas) drawBanana(b);
@@ -698,7 +937,7 @@ function render(){
   ctx.globalAlpha = 1;
   if (monkeys.length === 0){
     ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(111,148,131,.7)';
+    ctx.fillStyle = 'rgba(141,130,171,.7)';
     ctx.font = '16px monospace';
     ctx.fillText('Arena empty — waiting for buys... (or hit Demo Mode)', W/2, H/2);
   }
@@ -726,6 +965,54 @@ function renderChamps(){
   });
 }
 
+/* ============ ROYAL COURT (on-chain top holders) ============ */
+async function rpc(method, params){
+  const res = await fetch(RPC_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc:'2.0', id:1, method, params })
+  });
+  const j = await res.json();
+  if (j.error) throw new Error(j.error.message || 'RPC error');
+  return j.result;
+}
+const COURT_TITLES = i =>
+  i === 0 ? '👑 King' : i <= 2 ? '💎 Prince' : i <= 5 ? '🏰 Duke' : i <= 9 ? '🛡 Baron' : i <= 14 ? '⚔️ Knight' : '🗡 Squire';
+
+async function fetchCourt(ca){
+  const el = document.getElementById('court');
+  try {
+    const supplyRes = await rpc('getTokenSupply', [ca]);
+    const supply = Number(supplyRes.value.uiAmount) || 0;
+    const largest = await rpc('getTokenLargestAccounts', [ca]);
+    let accounts = largest.value
+      .map(a => ({ addr: a.address, amt: Number(a.uiAmount) || 0 }))
+      .filter(a => a.amt > 0);
+    // drop pool/curve-sized accounts (they'd otherwise sit on the throne)
+    if (supply > 0) accounts = accounts.filter(a => a.amt / supply < 0.4);
+    // resolve owners of the token accounts
+    const info = await rpc('getMultipleAccounts', [accounts.map(a => a.addr), { encoding:'jsonParsed' }]);
+    info.value.forEach((v, i) => {
+      accounts[i].owner = v && v.data && v.data.parsed ? v.data.parsed.info.owner : accounts[i].addr;
+    });
+    el.innerHTML = accounts.length ? '' : '<div class="evt sys">No holders found yet</div>';
+    accounts.slice(0, 20).forEach((a, i) => {
+      const d = document.createElement('div');
+      d.className = 'courtRow';
+      const pct = supply > 0 ? (a.amt / supply * 100).toFixed(2) + '%' : '';
+      d.innerHTML = `<span class="title">${COURT_TITLES(i)}</span><span class="wallet">${shortWallet(a.owner)}</span><span class="pct">${pct}</span>`;
+      el.appendChild(d);
+    });
+  } catch(e){
+    el.innerHTML = '<div class="evt sys">Court unavailable right now (RPC busy) — retrying soon</div>';
+  }
+}
+function startCourt(ca){
+  clearInterval(courtTimer);
+  fetchCourt(ca);
+  courtTimer = setInterval(() => fetchCourt(ca), 90000);
+}
+
 /* ============ PUMPPORTAL WEBSOCKET ============ */
 const statusEl = document.getElementById('status');
 function setStatus(txt, cls){ statusEl.textContent = '● ' + txt; statusEl.className = cls || ''; }
@@ -740,6 +1027,8 @@ function connect(ca){
     ws.send(JSON.stringify({ method: 'subscribeTokenTrade', keys: [ca] }));
     setStatus('LIVE · ' + shortWallet(ca), 'live');
     addEvent('sys', `Connected — watching trades on ${shortWallet(ca)}`);
+    document.getElementById('footerCa').innerHTML = `CA: <span class="ca">${ca}</span>`;
+    startCourt(ca);
   };
   ws.onmessage = (ev) => {
     let d; try { d = JSON.parse(ev.data); } catch(e){ return; }
@@ -781,11 +1070,9 @@ function demoTick(){
   const r = Math.random();
   const wallet = DEMO_WALLETS[Math.floor(Math.random()*DEMO_WALLETS.length)];
   if (r < 0.68){
-    // buy: mostly small, occasional whale
-    const sol = Math.random() < 0.12 ? rand(2, 5) : rand(0.05, 1.2);
+    const sol = Math.random() < 0.12 ? rand(2, 7) : rand(0.05, 1.2);
     spawnBuy(wallet, sol);
   } else if (r < 0.82 && monkeys.length > 0){
-    // simulate someone calling out the token → shield reward
     const m = monkeys[Math.floor(Math.random() * monkeys.length)];
     grantShield(m.wallet, 150, 'shilled the token on X');
   } else {
@@ -811,17 +1098,15 @@ document.getElementById('demoBtn').addEventListener('click', () => {
 /* ============ BOOT ============ */
 resize();
 renderChamps();
-// URL override: yoursite.com/?ca=<address> also works
 const urlCA = new URLSearchParams(location.search).get('ca');
 const bootCA = (urlCA && urlCA.trim()) || MY_COIN_CA.trim();
 if (bootCA){
-  // locked to our coin — hide the paste UI, auto-connect
   document.getElementById('caInput').style.display = 'none';
   document.getElementById('connectBtn').style.display = 'none';
-  addEvent('sys', 'Welcome to Monkey Battle Royale. Every buy of our coin releases a monkey into the arena. 🍌');
+  addEvent('sys', 'Welcome to APEROYAL. Every buy releases an ape — your bag sets your rank. 🍌');
   connect(bootCA);
 } else {
-  addEvent('sys', 'Welcome to Monkey Battle Royale. Paste a pump.fun CA and hit Connect — every buy spawns a fighter. 🍌');
+  addEvent('sys', 'Welcome to APEROYAL. Paste a pump.fun CA and hit Connect — every buy spawns a fighter. 🍌');
 }
 addEvent('sys', 'Press G to grant a 🛡 shield to a holder who called out the token (enter the start of their wallet).');
 loop();
