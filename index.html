@@ -191,6 +191,7 @@
   <input id="caInput" placeholder="Paste a pump.fun contract address (CA)..." spellcheck="false">
   <button id="connectBtn">Connect</button>
   <button id="demoBtn" class="secondary">Demo Mode</button>
+  <button id="soundBtn" class="secondary" title="Toggle music & sounds">🔊</button>
   <div id="status">● offline</div>
 </header>
 
@@ -359,6 +360,101 @@ let courtTimer = null;
 let champions = [];
 try { champions = JSON.parse(localStorage.getItem('mbr_champs') || '[]'); } catch(e){}
 
+/* ============ AUDIO (all synthesized — no files) ============ */
+let AC = null, masterGain = null, musicGain = null, musicTimer = null;
+let soundOn = true;
+try { soundOn = localStorage.getItem('mbr_sound') !== 'off'; } catch(e){}
+let lastSfxAt = 0;
+
+function ensureAudio(){
+  if (AC) return;
+  try {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = AC.createGain();
+    masterGain.gain.value = soundOn ? 0.35 : 0;
+    masterGain.connect(AC.destination);
+    musicGain = AC.createGain();
+    musicGain.gain.value = 0.16;
+    musicGain.connect(masterGain);
+    startMusic();
+  } catch(e){ /* no audio support */ }
+}
+// browsers only allow sound after a user gesture
+window.addEventListener('pointerdown', ensureAudio, { once:true });
+window.addEventListener('keydown', ensureAudio, { once:true });
+
+function tone(freq, dur, type, vol, when, dest, slideTo){
+  if (!AC) return;
+  const t = AC.currentTime + (when || 0);
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = type || 'sine';
+  o.frequency.setValueAtTime(freq, t);
+  if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t + dur);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(dest || masterGain);
+  o.start(t); o.stop(t + dur + 0.05);
+}
+function noiseBurst(dur, vol, when){
+  if (!AC) return;
+  const t = AC.currentTime + (when || 0);
+  const len = Math.max(1, Math.floor(AC.sampleRate * dur));
+  const buf = AC.createBuffer(1, len, AC.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random()*2-1) * (1 - i/len);
+  const src = AC.createBufferSource(); src.buffer = buf;
+  const g = AC.createGain(); g.gain.value = vol;
+  src.connect(g); g.connect(masterGain);
+  src.start(t);
+}
+function sfx(kind){
+  if (!AC || !soundOn) return;
+  const now = performance.now();
+  if (now - lastSfxAt < 70) return;   // rate limit when the arena gets wild
+  lastSfxAt = now;
+  switch(kind){
+    case 'shoot':  noiseBurst(0.07, 0.25); tone(190, 0.08, 'square', 0.12, 0, null, 90); break;
+    case 'hit':    tone(120, 0.12, 'sine', 0.3, 0, null, 60); break;
+    case 'death':  tone(320, 0.35, 'sawtooth', 0.22, 0, null, 60); noiseBurst(0.2, 0.15, 0.05); break;
+    case 'spawn':  tone(392, 0.1, 'triangle', 0.22); tone(523, 0.14, 'triangle', 0.22, 0.09); break;
+    case 'promo':  [523, 659, 784].forEach((f,i)=>tone(f, 0.16, 'triangle', 0.25, i*0.11)); break;
+    case 'win':    [523, 659, 784, 1046].forEach((f,i)=>tone(f, 0.3, 'triangle', 0.3, i*0.16)); break;
+    case 'shield': tone(1200, 0.25, 'sine', 0.14, 0, null, 1800); tone(900, 0.3, 'sine', 0.1, 0.08); break;
+    case 'sell':   tone(280, 0.3, 'sawtooth', 0.18, 0, null, 110); break;
+  }
+}
+/* ambient loop: a mellow four-chord pad with a wandering pentatonic pluck */
+const CHORDS = [ [220, 261.6, 329.6], [174.6, 220, 261.6], [196, 246.9, 293.7], [164.8, 196, 246.9] ];
+const PENTA = [440, 523.3, 587.3, 659.3, 784];
+let chordStep = 0;
+function startMusic(){
+  if (musicTimer) return;
+  const bar = () => {
+    if (!AC || AC.state !== 'running') return;
+    const chord = CHORDS[chordStep % CHORDS.length];
+    chordStep++;
+    chord.forEach(f => tone(f, 2.3, 'triangle', 0.05, 0, musicGain));
+    tone(chord[0] / 2, 2.3, 'sine', 0.09, 0, musicGain);          // bass
+    for (let i = 0; i < 2; i++){                                   // plucks
+      if (Math.random() < 0.7)
+        tone(PENTA[Math.floor(Math.random()*PENTA.length)], 0.5, 'sine', 0.05, 0.4 + i*1.1, musicGain);
+    }
+  };
+  bar();
+  musicTimer = setInterval(bar, 2400);
+}
+const soundBtn = document.getElementById('soundBtn');
+function renderSoundBtn(){ soundBtn.textContent = soundOn ? '🔊' : '🔇'; }
+renderSoundBtn();
+soundBtn.addEventListener('click', () => {
+  ensureAudio();
+  soundOn = !soundOn;
+  if (masterGain) masterGain.gain.value = soundOn ? 0.35 : 0;
+  try { localStorage.setItem('mbr_sound', soundOn ? 'on' : 'off'); } catch(e){}
+  renderSoundBtn();
+});
+
 /* ============ HELPERS ============ */
 function hashStr(s){ let h = 2166136261; for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 function shortWallet(w){ return w.length > 10 ? w.slice(0,4) + '..' + w.slice(-4) : w; }
@@ -506,6 +602,7 @@ function refreshRank(m, announce){
   if (!announce) return;
   if (up){
     burst(m.x, m.y - m.size * 0.5, r.color, 22);
+    sfx('promo');
     floatText(m.x, m.y - m.size - 16, `${r.icon} promoted to ${r.name}!`, r.color);
     addEvent('rank', `${r.icon} ${m.name} has been promoted to <b style="color:${r.color}">${r.name}</b>!`);
   } else {
@@ -536,6 +633,7 @@ function spawnBuy(wallet, sol){
   monkeys.push(m);
   const r = RANKS[m.rank];
   burst(m.x, m.y, `hsl(${m.hue} 60% 55%)`, 18);
+  sfx('spawn');
   floatText(m.x, m.y - m.size - 14, m.rank >= 4 ? `${r.icon} ${r.name.toUpperCase()} ENTERS!` : 'joins the fight!', r.color);
   addEvent('buy', `<span class="sol">BUY ${sol.toFixed(2)} SOL</span> — ${r.icon} ${displayName(wallet)} enters as ${r.name}! (${Math.round(m.hp)} HP)`);
 }
@@ -548,6 +646,7 @@ function spawnSell(wallet, sol){
     m.flash = 8;
     m.invested = Math.max(0, m.invested - sol);
     m.tenure = 0; // diamond hands bonus resets on any sell
+    sfx('sell');
     floatText(m.x, m.y - m.size - 14, `PAPER HANDS -${Math.round(dmg)}`, '#ff5d5d');
     addEvent('sell', `<span class="neg">SELL ${sol.toFixed(2)} SOL</span> — ${displayName(wallet)}'s ape takes ${Math.round(dmg)} paper-hands damage!`);
     refreshRank(m, true);
@@ -577,6 +676,7 @@ function grantShield(query, amount, reason){
   if (!m){ addEvent('sys', `Shield grant failed — no ape matching "${query}"`); return false; }
   m.shield += amount;
   burst(m.x, m.y - m.size * 0.4, '#5db8ff', 20);
+  sfx('shield');
   floatText(m.x, m.y - m.size - 14, '🛡 SHILL SHIELD!', '#5db8ff');
   addEvent('shield', `🛡 ${m.name} ${reason || 'called out the token'} — +${amount} shield!`);
   return true;
@@ -591,6 +691,7 @@ window.addEventListener('keydown', e => {
 function killMonkey(m, killer, how){
   monkeys = monkeys.filter(x => x !== m);
   burst(m.x, m.y, '#888', 26);
+  sfx('death');
   floatText(m.x, m.y, '💀', '#fff');
   if (killer){
     killer.kills++;
@@ -609,6 +710,7 @@ function checkVictory(){
   if (roundHadBattle && monkeys.length === 1) declareWinner(monkeys[0], 'LAST APE STANDING');
 }
 function declareWinner(m, label){
+  sfx('win');
   showBanner('🏆 ' + label, `${m.name} · ${m.kills} kills`);
   addEvent('win', `🏆 ${label}: ${m.name} wins the round with ${m.kills} kills!`);
   champions.unshift({ wallet: m.name, kills: m.kills, t: Date.now() });
@@ -685,6 +787,7 @@ function update(){
       if (m.cooldown <= 0 && d < 420){
         m.cooldown = rand(1100, 2400);
         m.muzzle = 5;
+        sfx('shoot');
         const sp = 5.5;
         const lead = 8;
         const tx = target.x + target.vx * lead, ty = target.y + target.vy * lead;
@@ -719,6 +822,7 @@ function update(){
         m.flash = 6;
         m.vx += b.vx * 0.35; m.vy += b.vy * 0.35;
         burst(b.x, b.y, '#ffd75e', 6);
+        sfx('hit');
         b.life = 0;
         if (applyDamage(m, dmg) && monkeys.includes(m)) killMonkey(m, b.owner);
         break;
