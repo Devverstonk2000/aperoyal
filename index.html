@@ -371,10 +371,10 @@ function ensureAudio(){
   try {
     AC = new (window.AudioContext || window.webkitAudioContext)();
     masterGain = AC.createGain();
-    masterGain.gain.value = soundOn ? 0.35 : 0;
+    masterGain.gain.value = soundOn ? 0.22 : 0;
     masterGain.connect(AC.destination);
     musicGain = AC.createGain();
-    musicGain.gain.value = 0.16;
+    musicGain.gain.value = 0.5;
     musicGain.connect(masterGain);
     startMusic();
   } catch(e){ /* no audio support */ }
@@ -396,7 +396,7 @@ function tone(freq, dur, type, vol, when, dest, slideTo){
   o.connect(g); g.connect(dest || masterGain);
   o.start(t); o.stop(t + dur + 0.05);
 }
-function noiseBurst(dur, vol, when){
+function noiseBurst(dur, vol, when, dest){
   if (!AC) return;
   const t = AC.currentTime + (when || 0);
   const len = Math.max(1, Math.floor(AC.sampleRate * dur));
@@ -405,44 +405,63 @@ function noiseBurst(dur, vol, when){
   for (let i = 0; i < len; i++) d[i] = (Math.random()*2-1) * (1 - i/len);
   const src = AC.createBufferSource(); src.buffer = buf;
   const g = AC.createGain(); g.gain.value = vol;
-  src.connect(g); g.connect(masterGain);
+  src.connect(g); g.connect(dest || masterGain);
   src.start(t);
 }
 function sfx(kind){
   if (!AC || !soundOn) return;
   const now = performance.now();
-  if (now - lastSfxAt < 70) return;   // rate limit when the arena gets wild
+  if (now - lastSfxAt < 120) return;   // rate limit when the arena gets wild
   lastSfxAt = now;
   switch(kind){
-    case 'shoot':  noiseBurst(0.07, 0.25); tone(190, 0.08, 'square', 0.12, 0, null, 90); break;
-    case 'hit':    tone(120, 0.12, 'sine', 0.3, 0, null, 60); break;
-    case 'death':  tone(320, 0.35, 'sawtooth', 0.22, 0, null, 60); noiseBurst(0.2, 0.15, 0.05); break;
-    case 'spawn':  tone(392, 0.1, 'triangle', 0.22); tone(523, 0.14, 'triangle', 0.22, 0.09); break;
-    case 'promo':  [523, 659, 784].forEach((f,i)=>tone(f, 0.16, 'triangle', 0.25, i*0.11)); break;
-    case 'win':    [523, 659, 784, 1046].forEach((f,i)=>tone(f, 0.3, 'triangle', 0.3, i*0.16)); break;
-    case 'shield': tone(1200, 0.25, 'sine', 0.14, 0, null, 1800); tone(900, 0.3, 'sine', 0.1, 0.08); break;
-    case 'sell':   tone(280, 0.3, 'sawtooth', 0.18, 0, null, 110); break;
+    case 'shoot':  noiseBurst(0.05, 0.09); tone(190, 0.07, 'square', 0.04, 0, null, 90); break;
+    case 'hit':    tone(120, 0.1, 'sine', 0.11, 0, null, 60); break;
+    case 'death':  tone(320, 0.3, 'sawtooth', 0.09, 0, null, 60); noiseBurst(0.15, 0.06, 0.05); break;
+    case 'spawn':  tone(392, 0.09, 'triangle', 0.09); tone(523, 0.12, 'triangle', 0.09, 0.09); break;
+    case 'promo':  [523, 659, 784].forEach((f,i)=>tone(f, 0.15, 'triangle', 0.11, i*0.11)); break;
+    case 'win':    [523, 659, 784, 1046].forEach((f,i)=>tone(f, 0.28, 'triangle', 0.14, i*0.16)); break;
+    case 'shield': tone(1200, 0.22, 'sine', 0.06, 0, null, 1800); break;
+    case 'sell':   tone(280, 0.26, 'sawtooth', 0.07, 0, null, 110); break;
   }
 }
-/* ambient loop: a mellow four-chord pad with a wandering pentatonic pluck */
-const CHORDS = [ [220, 261.6, 329.6], [174.6, 220, 261.6], [196, 246.9, 293.7], [164.8, 196, 246.9] ];
-const PENTA = [440, 523.3, 587.3, 659.3, 784];
-let chordStep = 0;
+/* battle-royale loop: war drums, tense minor-key ostinato, low drone.
+   E minor progression: Em → C → G → D, one chord per bar, ~112 BPM. */
+const WAR_CHORDS = [
+  { root: 82.4,  arp: [164.8, 196.0, 246.9, 196.0] },   // Em
+  { root: 65.4,  arp: [130.8, 164.8, 196.0, 164.8] },   // C
+  { root: 98.0,  arp: [196.0, 246.9, 293.7, 246.9] },   // G
+  { root: 73.4,  arp: [146.8, 185.0, 220.0, 185.0] },   // D
+];
+let barCount = 0;
 function startMusic(){
   if (musicTimer) return;
+  const beat = 60 / 112;              // seconds per beat
+  const barLen = beat * 4;
   const bar = () => {
     if (!AC || AC.state !== 'running') return;
-    const chord = CHORDS[chordStep % CHORDS.length];
-    chordStep++;
-    chord.forEach(f => tone(f, 2.3, 'triangle', 0.05, 0, musicGain));
-    tone(chord[0] / 2, 2.3, 'sine', 0.09, 0, musicGain);          // bass
-    for (let i = 0; i < 2; i++){                                   // plucks
-      if (Math.random() < 0.7)
-        tone(PENTA[Math.floor(Math.random()*PENTA.length)], 0.5, 'sine', 0.05, 0.4 + i*1.1, musicGain);
+    const ch = WAR_CHORDS[barCount % WAR_CHORDS.length];
+    barCount++;
+    // low drone
+    tone(ch.root, barLen + 0.1, 'sawtooth', 0.030, 0, musicGain);
+    tone(ch.root, barLen + 0.1, 'triangle', 0.045, 0, musicGain);
+    // war drums: deep toms on 1 and 3, extra hit on the 4-and every other bar
+    tone(70, 0.22, 'sine', 0.30, 0, musicGain, 40);
+    tone(70, 0.22, 'sine', 0.26, beat * 2, musicGain, 40);
+    if (barCount % 2 === 0) tone(85, 0.15, 'sine', 0.18, beat * 3.5, musicGain, 50);
+    // soft snare on 2 and 4
+    noiseBurst(0.07, 0.045, beat, musicGain);
+    noiseBurst(0.07, 0.055, beat * 3, musicGain);
+    // ticking hats — eighth notes, very quiet
+    for (let i = 0; i < 8; i++) noiseBurst(0.015, 0.018, i * beat * 0.5, musicGain);
+    // tense ostinato — eighth-note arpeggio
+    for (let i = 0; i < 8; i++){
+      tone(ch.arp[i % 4], 0.16, 'sawtooth', 0.028, i * beat * 0.5, musicGain);
     }
+    // rising lift into the next section every 4th bar
+    if (barCount % 4 === 0) tone(ch.root * 4, barLen, 'sine', 0.02, 0, musicGain, ch.root * 6);
   };
   bar();
-  musicTimer = setInterval(bar, 2400);
+  musicTimer = setInterval(bar, barLen * 1000);
 }
 const soundBtn = document.getElementById('soundBtn');
 function renderSoundBtn(){ soundBtn.textContent = soundOn ? '🔊' : '🔇'; }
