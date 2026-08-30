@@ -966,14 +966,21 @@ function renderChamps(){
 }
 
 /* ============ ROYAL COURT (on-chain top holders) ============ */
-async function rpc(method, params){
+async function rpc(method, params, attempt = 0){
   const res = await fetch(RPC_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ jsonrpc:'2.0', id:1, method, params })
   });
   const j = await res.json();
-  if (j.error) throw new Error(j.error.message || 'RPC error');
+  if (j.error){
+    // back off and retry once on rate limiting
+    if (attempt < 2 && /Too Many|429/i.test(j.error.message || '')){
+      await new Promise(r => setTimeout(r, 4000 * (attempt + 1)));
+      return rpc(method, params, attempt + 1);
+    }
+    throw new Error(j.error.message || 'RPC error');
+  }
   return j.result;
 }
 const COURT_TITLES = i =>
@@ -985,9 +992,9 @@ async function fetchCourt(ca){
   try {
     const supplyRes = await rpc('getTokenSupply', [ca]);
     const supply = Number(supplyRes.value.uiAmount) || 0;
-    await pause(1200);
+    await pause(2500);
     const largest = await rpc('getTokenLargestAccounts', [ca]);
-    await pause(1200);
+    await pause(2500);
     let accounts = largest.value
       .map(a => ({ addr: a.address, amt: Number(a.uiAmount) || 0 }))
       .filter(a => a.amt > 0);
