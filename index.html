@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐵 Monkey Battle Royale</title>
+<style>
+  :root{
+    --bg:#0b1210; --panel:#111d18; --panel2:#0e1814; --border:#1f3a2d;
+    --text:#d8efe2; --dim:#6f9483; --accent:#39d98a; --gold:#ffd75e;
+    --red:#ff5d5d; --blue:#5db8ff;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:'Segoe UI', system-ui, sans-serif;
+    height:100vh; display:flex; flex-direction:column; overflow:hidden;
+  }
+  header{
+    display:flex; align-items:center; gap:12px; padding:10px 16px;
+    background:var(--panel); border-bottom:1px solid var(--border); flex-wrap:wrap;
+  }
+  header h1{font-size:18px; letter-spacing:.5px; white-space:nowrap;}
+  header h1 span{color:var(--accent);}
+  #caInput{
+    flex:1; min-width:220px; background:var(--panel2); border:1px solid var(--border);
+    color:var(--text); padding:8px 12px; border-radius:8px; font-family:monospace; font-size:13px;
+  }
+  #caInput:focus{outline:none; border-color:var(--accent);}
+  button{
+    background:var(--accent); color:#06130c; border:none; padding:8px 16px;
+    border-radius:8px; font-weight:700; cursor:pointer; font-size:13px;
+  }
+  button:hover{filter:brightness(1.1);}
+  button.secondary{background:var(--panel2); color:var(--text); border:1px solid var(--border);}
+  button.active-demo{background:var(--gold); color:#3a2b00;}
+  #status{
+    font-size:12px; padding:4px 10px; border-radius:20px;
+    background:var(--panel2); border:1px solid var(--border); color:var(--dim); white-space:nowrap;
+  }
+  #status.live{color:var(--accent); border-color:var(--accent);}
+  #status.err{color:var(--red); border-color:var(--red);}
+  main{flex:1; display:flex; min-height:0;}
+  #arenaWrap{flex:1; position:relative; min-width:0;}
+  canvas{display:block; width:100%; height:100%;}
+  #hud{
+    position:absolute; top:10px; left:12px; display:flex; gap:10px; align-items:center;
+    font-size:13px; pointer-events:none;
+  }
+  .hudChip{
+    background:rgba(10,20,15,.75); border:1px solid var(--border);
+    padding:5px 12px; border-radius:20px; backdrop-filter:blur(4px);
+  }
+  .hudChip b{color:var(--accent);}
+  #roundTimer b{color:var(--gold);}
+  #banner{
+    position:absolute; top:38%; left:50%; transform:translate(-50%,-50%) scale(0);
+    text-align:center; pointer-events:none; transition:transform .35s cubic-bezier(.2,1.6,.4,1);
+    text-shadow:0 2px 12px rgba(0,0,0,.8);
+  }
+  #banner.show{transform:translate(-50%,-50%) scale(1);}
+  #banner .big{font-size:42px; font-weight:900; color:var(--gold);}
+  #banner .sub{font-size:16px; color:var(--text); font-family:monospace; margin-top:6px;}
+  aside{
+    width:290px; background:var(--panel); border-left:1px solid var(--border);
+    display:flex; flex-direction:column; min-height:0;
+  }
+  aside h2{
+    font-size:12px; text-transform:uppercase; letter-spacing:1.5px; color:var(--dim);
+    padding:12px 14px 8px;
+  }
+  #leaderboard{padding:0 14px 8px; overflow-y:auto; max-height:34%;}
+  .champ{
+    display:flex; align-items:center; gap:8px; font-size:12px; padding:6px 8px;
+    background:var(--panel2); border:1px solid var(--border); border-radius:8px; margin-bottom:6px;
+    font-family:monospace;
+  }
+  .champ .crown{font-size:15px;}
+  .champ .wallet{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .champ .kills{color:var(--gold); font-weight:700; white-space:nowrap;}
+  #feed{flex:1; overflow-y:auto; padding:0 14px 14px; display:flex; flex-direction:column; gap:5px;}
+  .evt{
+    font-size:12px; padding:6px 9px; border-radius:7px; background:var(--panel2);
+    border-left:3px solid var(--dim); font-family:monospace; line-height:1.45;
+    animation:slideIn .25s ease;
+  }
+  @keyframes slideIn{from{opacity:0; transform:translateX(12px);} to{opacity:1;}}
+  .evt.buy{border-left-color:var(--accent);}
+  .evt.sell{border-left-color:var(--red);}
+  .evt.shield{border-left-color:var(--blue); background:#10202e;}
+  .evt.kill{border-left-color:var(--gold);}
+  .evt.win{border-left-color:var(--gold); background:#2a2410; color:var(--gold);}
+  .evt.sys{border-left-color:var(--blue); color:var(--dim);}
+  .evt .sol{color:var(--accent); font-weight:700;}
+  .evt .neg{color:var(--red); font-weight:700;}
+  ::-webkit-scrollbar{width:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--border); border-radius:4px;}
+  @media(max-width:820px){ aside{display:none;} }
+</style>
+</head>
+<body>
+<header>
+  <h1>🐵 MONKEY <span>BATTLE ROYALE</span></h1>
+  <input id="caInput" placeholder="Paste a pump.fun contract address (CA)..." spellcheck="false">
+  <button id="connectBtn">Connect</button>
+  <button id="demoBtn" class="secondary">Demo Mode</button>
+  <div id="status">● offline</div>
+</header>
+<main>
+  <div id="arenaWrap">
+    <canvas id="arena"></canvas>
+    <div id="hud">
+      <div class="hudChip">🐒 Fighters: <b id="popCount">0</b></div>
+      <div class="hudChip" id="roundTimer">⏱ Round: <b id="timerVal">5:00</b></div>
+      <div class="hudChip">💥 Kills: <b id="killCount">0</b></div>
+    </div>
+    <div id="banner"><div class="big"></div><div class="sub"></div></div>
+  </div>
+  <aside>
+    <h2>🏆 Champions</h2>
+    <div id="leaderboard"></div>
+    <h2>📡 Live Feed</h2>
+    <div id="feed"></div>
+  </aside>
+</main>
+
+<script>
+'use strict';
+/* ============ CONFIG ============ */
+/*  👇 PASTE YOUR COIN'S CONTRACT ADDRESS HERE (between the quotes) once you
+    launch it on pump.fun. The page will then auto-connect to your coin for
+    every visitor — no pasting needed. Leave empty '' to show the input box. */
+const MY_COIN_CA = '';
+
+const ROUND_MS = 5 * 60 * 1000;
+const MAX_MONKEYS = 60;
+const WS_URL = 'wss://pumpportal.fun/api/data';
+
+/* ============ STATE ============ */
+const canvas = document.getElementById('arena');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0;
+let monkeys = [];        // living fighters
+let bananas = [];        // projectiles
+let particles = [];      // fx
+let floaters = [];       // floating text
+let roundEndsAt = Date.now() + ROUND_MS;
+let roundHadBattle = false;
+let totalKills = 0;
+let ws = null, wsAlive = false, subscribedCA = null;
+let demoTimer = null;
+let champions = [];
+try { champions = JSON.parse(localStorage.getItem('mbr_champs') || '[]'); } catch(e){}
+
+/* ============ HELPERS ============ */
+function hashStr(s){ let h = 2166136261; for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function shortWallet(w){ return w.length > 10 ? w.slice(0,4) + '..' + w.slice(-4) : w; }
+function rand(a,b){ return a + Math.random()*(b-a); }
+function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy); }
+
+function resize(){
+  const r = canvas.parentElement.getBoundingClientRect();
+  W = canvas.width = r.width; H = canvas.height = r.height;
+  makeGrass();
+}
+window.addEventListener('resize', resize);
+
+/* ============ GRASS ============ */
+let grassTufts = [];
+let dirtPatches = [];
+function makeGrass(){
+  grassTufts = [];
+  dirtPatches = [];
+  const n = Math.floor((W * H) / 7000);
+  for (let i = 0; i < n; i++){
+    const y = rand(70, H);
+    const depth = 0.55 + 0.45 * (y / H);   // farther back = smaller & dimmer
+    const blades = [];
+    const bn = 4 + Math.floor(Math.random() * 4);
+    for (let b = 0; b < bn; b++){
+      blades.push({
+        a: rand(-0.6, 0.6),
+        len: rand(8, 20) * depth,
+        w: rand(1, 2.4) * depth,
+        bend: rand(3, 8)
+      });
+    }
+    grassTufts.push({
+      x: rand(0, W), y,
+      hue: 138 + rand(-14, 16),
+      sat: rand(35, 55),
+      light: rand(20, 34) * depth,
+      phase: rand(0, Math.PI * 2),
+      depth, blades
+    });
+  }
+  grassTufts.sort((a, b) => a.y - b.y);
+  for (let i = 0; i < 10; i++){
+    dirtPatches.push({ x: rand(0, W), y: rand(100, H), rx: rand(30, 90), ry: rand(10, 26), rot: rand(-0.3, 0.3) });
+  }
+}
+function drawGrass(t){
+  // dirt patches under the grass
+  ctx.fillStyle = 'rgba(40,32,20,0.22)';
+  for (const p of dirtPatches){
+    ctx.beginPath(); ctx.ellipse(p.x, p.y, p.rx, p.ry, p.rot, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.lineCap = 'round';
+  for (const g of grassTufts){
+    const sway = Math.sin(t * 0.0012 + g.phase) * 2.2 * g.depth;
+    for (const b of g.blades){
+      const tipX = g.x + Math.sin(b.a) * b.len * 0.6 + sway + b.bend * 0.4;
+      const tipY = g.y - Math.cos(b.a) * b.len;
+      const cx = g.x + Math.sin(b.a) * b.len * 0.25 + sway * 0.4;
+      const cy = g.y - Math.cos(b.a) * b.len * 0.55;
+      ctx.strokeStyle = `hsl(${g.hue} ${g.sat}% ${g.light}%)`;
+      ctx.lineWidth = b.w;
+      ctx.beginPath();
+      ctx.moveTo(g.x, g.y);
+      ctx.quadraticCurveTo(cx, cy, tipX, tipY);
+      ctx.stroke();
+    }
+    // tiny lighter core blade for depth
+    ctx.strokeStyle = `hsl(${g.hue} ${g.sat + 10}% ${Math.min(50, g.light + 12)}%)`;
+    ctx.lineWidth = 1 * g.depth;
+    ctx.beginPath();
+    ctx.moveTo(g.x, g.y);
+    ctx.quadraticCurveTo(g.x + sway * 0.5, g.y - 8 * g.depth, g.x + sway, g.y - 13 * g.depth);
+    ctx.stroke();
+  }
+}
+
+/* ============ MONKEY ============ */
+const HATS = ['none','none','bandana','leaf','flower','headband','crown'];
+function makeMonkey(wallet, solAmount){
+  const h = hashStr(wallet);
+  const hue = h % 360;
+  const isWhale = solAmount >= 2;
+  const hp = Math.min(40 + solAmount * 120, 900);
+  return {
+    wallet, name: shortWallet(wallet),
+    x: rand(60, W-60), y: rand(80, H-60),
+    vx: 0, vy: 0,
+    hp, maxHp: hp,
+    size: Math.min(16 + solAmount * 9, 42),
+    hue,
+    furLight: 30 + (h >> 8) % 20,
+    hat: isWhale ? 'crown' : HATS[(h >> 4) % HATS.length],
+    kills: 0,
+    cooldown: rand(500, 2000),
+    wanderA: rand(0, Math.PI*2),
+    bobT: rand(0, 10),
+    face: (h >> 12) % 3,  // 0 chill, 1 angry, 2 derp
+    flash: 0,
+    aimA: rand(-0.4, 0.4),
+    muzzle: 0,
+    shield: 0,
+    invested: solAmount
+  };
+}
+
+function spawnBuy(wallet, sol){
+  const existing = monkeys.find(m => m.wallet === wallet);
+  if (existing){
+    // re-buy: heal + grow
+    const heal = sol * 120;
+    existing.hp = Math.min(existing.hp + heal, existing.maxHp + heal);
+    existing.maxHp = Math.max(existing.maxHp, existing.hp);
+    existing.size = Math.min(existing.size + sol * 4, 46);
+    existing.invested += sol;
+    floatText(existing.x, existing.y - existing.size - 14, `+${Math.round(heal)} HP`, '#39d98a');
+    addEvent('buy', `<span class="sol">BUY ${sol.toFixed(2)} SOL</span> — ${shortWallet(wallet)}'s monkey powers up!`);
+    return;
+  }
+  if (monkeys.length >= MAX_MONKEYS){
+    addEvent('sys', `Arena full (${MAX_MONKEYS}) — buy from ${shortWallet(wallet)} ignored`);
+    return;
+  }
+  const m = makeMonkey(wallet, sol);
+  monkeys.push(m);
+  burst(m.x, m.y, `hsl(${m.hue} 60% 55%)`, 18);
+  floatText(m.x, m.y - m.size - 14, sol >= 2 ? '🦍 WHALE ENTERS!' : 'joins the fight!', sol >= 2 ? '#ffd75e' : '#d8efe2');
+  addEvent('buy', `<span class="sol">BUY ${sol.toFixed(2)} SOL</span> — 🐒 ${shortWallet(wallet)} enters the arena! (${Math.round(m.hp)} HP)`);
+}
+
+function spawnSell(wallet, sol){
+  const m = monkeys.find(mk => mk.wallet === wallet);
+  const dmg = sol * 100;
+  if (m){
+    m.flash = 8;
+    floatText(m.x, m.y - m.size - 14, `PAPER HANDS -${Math.round(dmg)}`, '#ff5d5d');
+    addEvent('sell', `<span class="neg">SELL ${sol.toFixed(2)} SOL</span> — ${shortWallet(wallet)}'s monkey takes ${Math.round(dmg)} paper-hands damage!`);
+    if (applyDamage(m, dmg)) killMonkey(m, null, 'sold themselves out');
+  } else {
+    addEvent('sell', `<span class="neg">SELL ${sol.toFixed(2)} SOL</span> — ${shortWallet(wallet)} (no monkey in arena)`);
+  }
+}
+
+/* returns true if the monkey died */
+function applyDamage(m, dmg){
+  if (m.shield > 0){
+    const absorbed = Math.min(m.shield, dmg);
+    m.shield -= absorbed;
+    dmg -= absorbed;
+    burst(m.x, m.y - m.size * 0.4, '#5db8ff', 5);
+    if (m.shield <= 0) floatText(m.x, m.y - m.size - 14, 'shield broken!', '#5db8ff');
+  }
+  if (dmg > 0) m.hp -= dmg;
+  return m.hp <= 0;
+}
+
+function grantShield(query, amount, reason){
+  const q = (query || '').trim().toLowerCase();
+  if (!q) return false;
+  const m = monkeys.find(mk => mk.wallet.toLowerCase().startsWith(q) || mk.name.toLowerCase().includes(q));
+  if (!m){ addEvent('sys', `Shield grant failed — no monkey matching "${query}"`); return false; }
+  m.shield += amount;
+  burst(m.x, m.y - m.size * 0.4, '#5db8ff', 20);
+  floatText(m.x, m.y - m.size - 14, '🛡 SHILL SHIELD!', '#5db8ff');
+  addEvent('shield', `🛡 ${m.name} ${reason || 'called out the token'} — +${amount} shield!`);
+  return true;
+}
+
+// Press G to reward a shiller: type part of their wallet, their monkey gets a shield
+window.addEventListener('keydown', e => {
+  if (e.key.toLowerCase() === 'g' && document.activeElement.tagName !== 'INPUT'){
+    const q = window.prompt('🛡 Grant shill shield — enter the start of the wallet address:');
+    if (q) grantShield(q, 150);
+  }
+});
+
+function killMonkey(m, killer, how){
+  monkeys = monkeys.filter(x => x !== m);
+  burst(m.x, m.y, '#888', 26);
+  floatText(m.x, m.y, '💀', '#fff');
+  if (killer){
+    killer.kills++;
+    totalKills++;
+    addEvent('kill', `💥 ${killer.name} eliminated ${m.name}! (${killer.kills} kills)`);
+  } else {
+    addEvent('kill', `💀 ${m.name} ${how || 'was eliminated'}`);
+  }
+  checkVictory();
+}
+
+/* ============ ROUND / VICTORY ============ */
+function checkVictory(){
+  if (roundHadBattle && monkeys.length === 1) declareWinner(monkeys[0], 'LAST MONKEY STANDING');
+}
+function declareWinner(m, label){
+  showBanner('🏆 ' + label, `${m.name} · ${m.kills} kills`);
+  addEvent('win', `🏆 ${label}: ${m.name} wins the round with ${m.kills} kills!`);
+  champions.unshift({ wallet: m.name, kills: m.kills, t: Date.now() });
+  champions = champions.slice(0, 12);
+  try { localStorage.setItem('mbr_champs', JSON.stringify(champions)); } catch(e){}
+  renderChamps();
+  // champion stays, fully healed, ready for challengers
+  m.hp = m.maxHp;
+  m.kills = 0;
+  roundHadBattle = false;
+  roundEndsAt = Date.now() + ROUND_MS;
+}
+function endRoundByTimer(){
+  if (monkeys.length >= 2){
+    const lead = [...monkeys].sort((a,b) => b.kills - a.kills || b.hp - a.hp)[0];
+    declareWinner(lead, 'ROUND CHAMPION');
+    monkeys.forEach(mk => mk.hp = mk.maxHp); // everyone heals for next round
+  } else {
+    roundEndsAt = Date.now() + ROUND_MS;
+  }
+}
+let bannerTimeout = null;
+function showBanner(big, sub){
+  const b = document.getElementById('banner');
+  b.querySelector('.big').textContent = big;
+  b.querySelector('.sub').textContent = sub;
+  b.classList.add('show');
+  clearTimeout(bannerTimeout);
+  bannerTimeout = setTimeout(() => b.classList.remove('show'), 4500);
+}
+
+/* ============ FX ============ */
+function burst(x, y, color, n){
+  for(let i=0;i<n;i++){
+    const a = rand(0, Math.PI*2), s = rand(1,4);
+    particles.push({x, y, vx:Math.cos(a)*s, vy:Math.sin(a)*s - 1, life:rand(20,45), color, r:rand(2,4)});
+  }
+}
+function floatText(x, y, text, color){
+  floaters.push({x, y, text, color, life: 70});
+}
+
+/* ============ SIM ============ */
+function update(){
+  const now = Date.now();
+  // fight only when 2+
+  const fighting = monkeys.length >= 2;
+  if (fighting) roundHadBattle = true;
+
+  for (const m of monkeys){
+    m.bobT += 0.1;
+    if (m.flash > 0) m.flash--;
+    if (m.muzzle > 0) m.muzzle--;
+    // find target
+    let target = null, best = Infinity;
+    for (const o of monkeys){
+      if (o === m) continue;
+      const d = dist(m, o);
+      if (d < best){ best = d; target = o; }
+    }
+    if (target){
+      const desired = 130 + m.size * 2;
+      const dx = target.x - m.x, dy = target.y - m.y, d = Math.hypot(dx,dy) || 1;
+      // circle-strafe toward preferred range
+      const push = (d - desired) * 0.0022;
+      m.vx += (dx/d) * push + Math.cos(m.wanderA) * 0.06;
+      m.vy += (dy/d) * push + Math.sin(m.wanderA) * 0.06;
+      m.wanderA += rand(-0.3, 0.3);
+      m.aimA = Math.atan2(dy, dx);
+      // fire the banana gun
+      m.cooldown -= 16.6;
+      if (m.cooldown <= 0 && d < 420){
+        m.cooldown = rand(1100, 2400);
+        m.muzzle = 5;
+        const sp = 5.5;
+        const lead = 8; // slight aim lead
+        const tx = target.x + target.vx * lead, ty = target.y + target.vy * lead;
+        const adx = tx - m.x, ady = ty - m.y, ad = Math.hypot(adx, ady) || 1;
+        const bx = m.x + (adx/ad) * (m.size * 0.9 + 10);
+        const by = m.y + m.size * 0.1 + (ady/ad) * (m.size * 0.9 + 10);
+        bananas.push({ x:bx, y:by, vx:adx/ad*sp, vy:ady/ad*sp - 0.3, owner:m, spin:0, life:140 });
+      }
+      // melee bump
+      if (d < m.size + target.size){
+        if (applyDamage(target, 0.35)) killMonkey(target, m);
+      }
+    } else {
+      // idle wander
+      m.wanderA += rand(-0.2, 0.2);
+      m.vx += Math.cos(m.wanderA) * 0.04;
+      m.vy += Math.sin(m.wanderA) * 0.04;
+    }
+    m.vx *= 0.92; m.vy *= 0.92;
+    m.x += m.vx; m.y += m.vy;
+    // walls
+    const pad = m.size + 6;
+    if (m.x < pad){ m.x = pad; m.vx = Math.abs(m.vx); }
+    if (m.x > W - pad){ m.x = W - pad; m.vx = -Math.abs(m.vx); }
+    if (m.y < pad + 40){ m.y = pad + 40; m.vy = Math.abs(m.vy); }
+    if (m.y > H - pad){ m.y = H - pad; m.vy = -Math.abs(m.vy); }
+  }
+
+  // bananas
+  for (const b of bananas){
+    b.x += b.vx; b.y += b.vy; b.vy += 0.015; b.spin += 0.3; b.life--;
+    for (const m of monkeys){
+      if (m === b.owner) continue;
+      if (dist(b, m) < m.size + 6){
+        const dmg = rand(8, 16) * (1 + b.owner.size / 60);
+        m.flash = 6;
+        m.vx += b.vx * 0.35; m.vy += b.vy * 0.35;
+        burst(b.x, b.y, '#ffd75e', 6);
+        b.life = 0;
+        if (applyDamage(m, dmg) && monkeys.includes(m)) killMonkey(m, b.owner);
+        break;
+      }
+    }
+  }
+  bananas = bananas.filter(b => b.life > 0 && b.x > -20 && b.x < W+20 && b.y < H+20);
+
+  // fx
+  for (const p of particles){ p.x += p.vx; p.y += p.vy; p.vy += 0.08; p.life--; }
+  particles = particles.filter(p => p.life > 0);
+  for (const f of floaters){ f.y -= 0.7; f.life--; }
+  floaters = floaters.filter(f => f.life > 0);
+
+  // round timer
+  if (now >= roundEndsAt) endRoundByTimer();
+
+  // HUD
+  document.getElementById('popCount').textContent = monkeys.length;
+  document.getElementById('killCount').textContent = totalKills;
+  const remain = Math.max(0, roundEndsAt - now);
+  const mm = Math.floor(remain/60000), ss = Math.floor(remain%60000/1000);
+  document.getElementById('timerVal').textContent = `${mm}:${String(ss).padStart(2,'0')}`;
+}
+
+/* ============ RENDER ============ */
+function drawJungle(){
+  // sky gradient
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#0d1f16'); g.addColorStop(1,'#123324');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+  // distant canopy blobs
+  ctx.globalAlpha = 0.25;
+  for(let i=0;i<7;i++){
+    const x = (i*0.147*W*2.3) % W, r = 60 + (i*53)%90;
+    ctx.fillStyle = i%2 ? '#16402c' : '#1a4a33';
+    ctx.beginPath(); ctx.arc(x, 30 + (i*37)%60, r, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  // grass field
+  drawGrass(Date.now());
+  // vines
+  ctx.strokeStyle = '#1d5238'; ctx.lineWidth = 3;
+  for(let i=0;i<5;i++){
+    const x = (i+0.5)*W/5 + Math.sin(Date.now()/2000 + i)*8;
+    ctx.beginPath(); ctx.moveTo(x, 0);
+    ctx.quadraticCurveTo(x + 15, 40, x - 5, 85 + (i*23)%40);
+    ctx.stroke();
+  }
+}
+
+function drawMonkey(m){
+  const {x, y, size:s} = m;
+  const bob = Math.sin(m.bobT) * 2;
+  ctx.save();
+  ctx.translate(x, y + bob);
+  const fur = m.flash > 0 ? '#ffffff' : `hsl(${m.hue} 45% ${m.furLight}%)`;
+  const belly = `hsl(${m.hue} 40% ${m.furLight + 25}%)`;
+  // tail
+  ctx.strokeStyle = fur; ctx.lineWidth = Math.max(3, s*0.16); ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(s*0.6, s*0.3);
+  ctx.quadraticCurveTo(s*1.3, s*0.1, s*1.1, -s*0.55 + Math.sin(m.bobT*0.7)*4);
+  ctx.stroke();
+  // body
+  ctx.fillStyle = fur;
+  ctx.beginPath(); ctx.ellipse(0, s*0.25, s*0.72, s*0.62, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = belly;
+  ctx.beginPath(); ctx.ellipse(0, s*0.32, s*0.42, s*0.4, 0, 0, Math.PI*2); ctx.fill();
+  // arms
+  ctx.strokeStyle = fur; ctx.lineWidth = Math.max(3, s*0.2);
+  ctx.beginPath(); ctx.moveTo(-s*0.55, s*0.1); ctx.lineTo(-s*0.85, s*0.55 + Math.sin(m.bobT*1.3)*3); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(s*0.55, s*0.1); ctx.lineTo(s*0.85, s*0.55 - Math.sin(m.bobT*1.3)*3); ctx.stroke();
+  // ears
+  ctx.fillStyle = fur;
+  ctx.beginPath(); ctx.arc(-s*0.62, -s*0.55, s*0.24, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(s*0.62, -s*0.55, s*0.24, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = belly;
+  ctx.beginPath(); ctx.arc(-s*0.62, -s*0.55, s*0.12, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(s*0.62, -s*0.55, s*0.12, 0, Math.PI*2); ctx.fill();
+  // head
+  ctx.fillStyle = fur;
+  ctx.beginPath(); ctx.arc(0, -s*0.5, s*0.55, 0, Math.PI*2); ctx.fill();
+  // muzzle
+  ctx.fillStyle = belly;
+  ctx.beginPath(); ctx.ellipse(0, -s*0.36, s*0.34, s*0.28, 0, 0, Math.PI*2); ctx.fill();
+  // eyes
+  ctx.fillStyle = '#111';
+  const eyeY = -s*0.58;
+  if (m.face === 1){ // angry brows
+    ctx.strokeStyle = '#111'; ctx.lineWidth = Math.max(2, s*0.08);
+    ctx.beginPath(); ctx.moveTo(-s*0.28, eyeY - s*0.14); ctx.lineTo(-s*0.08, eyeY - s*0.05); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(s*0.28, eyeY - s*0.14); ctx.lineTo(s*0.08, eyeY - s*0.05); ctx.stroke();
+  }
+  ctx.beginPath(); ctx.arc(-s*0.18, eyeY, s*(m.face===2?0.1:0.07), 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(s*0.18, eyeY, s*0.07, 0, Math.PI*2); ctx.fill();
+  // nostrils + mouth
+  ctx.beginPath(); ctx.arc(-s*0.07, -s*0.4, s*0.03, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(s*0.07, -s*0.4, s*0.03, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#111'; ctx.lineWidth = Math.max(1.5, s*0.05);
+  ctx.beginPath(); ctx.arc(0, -s*0.32, s*0.14, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke();
+  // hat
+  drawHat(m, s);
+  // banana gun, aimed at current target
+  drawGun(m, s);
+  // shill shield bubble
+  if (m.shield > 0){
+    const pulse = 1 + Math.sin(m.bobT * 2) * 0.04;
+    ctx.strokeStyle = 'rgba(93,184,255,.75)';
+    ctx.lineWidth = 2;
+    ctx.fillStyle = 'rgba(93,184,255,.10)';
+    ctx.beginPath(); ctx.arc(0, -s*0.15, s * 1.25 * pulse, 0, Math.PI*2);
+    ctx.fill(); ctx.stroke();
+  }
+  ctx.restore();
+  // name + HP bar (unrotated)
+  ctx.textAlign = 'center';
+  ctx.font = `${Math.max(10, s*0.38)}px monospace`;
+  ctx.fillStyle = 'rgba(216,239,226,.85)';
+  ctx.fillText(m.name, x, y - s*1.35 - 12 + bob);
+  const bw = s * 1.6, bh = 4;
+  ctx.fillStyle = 'rgba(0,0,0,.5)';
+  ctx.fillRect(x - bw/2, y - s*1.35 - 8 + bob, bw, bh);
+  const frac = Math.max(0, m.hp / m.maxHp);
+  ctx.fillStyle = frac > 0.5 ? '#39d98a' : frac > 0.25 ? '#ffd75e' : '#ff5d5d';
+  ctx.fillRect(x - bw/2, y - s*1.35 - 8 + bob, bw * frac, bh);
+  if (m.shield > 0){
+    ctx.fillStyle = '#5db8ff';
+    const sfrac = Math.min(1, m.shield / 300);
+    ctx.fillRect(x - bw/2, y - s*1.35 - 13 + bob, bw * sfrac, 3);
+  }
+}
+
+function drawGun(m, s){
+  const aim = m.aimA || 0;
+  ctx.save();
+  // held at the end of the target-side arm
+  ctx.translate(Math.cos(aim) * s * 0.7, s * 0.1 + Math.sin(aim) * s * 0.35);
+  ctx.rotate(aim);
+  if (Math.cos(aim) < 0) ctx.scale(1, -1);   // keep the grip pointing down when aiming left
+  const gs = Math.max(0.7, s / 26);          // gun scale
+  // grip
+  ctx.fillStyle = '#4a3421';
+  ctx.save(); ctx.translate(3*gs, 2*gs); ctx.rotate(0.35); ctx.fillRect(-2*gs, 0, 5*gs, 9*gs); ctx.restore();
+  // slide / body
+  ctx.fillStyle = '#23272b';
+  ctx.fillRect(0, -3*gs, 16*gs, 6*gs);
+  ctx.fillStyle = '#3a4046';
+  ctx.fillRect(0, -3*gs, 16*gs, 2.4*gs);
+  // barrel tip
+  ctx.fillStyle = '#151719';
+  ctx.fillRect(16*gs, -2*gs, 3*gs, 3*gs);
+  // banana clip
+  ctx.strokeStyle = '#ffd75e';
+  ctx.lineWidth = 2.6*gs;
+  ctx.beginPath(); ctx.arc(8*gs, 6*gs, 4.5*gs, 0.15*Math.PI, 0.9*Math.PI); ctx.stroke();
+  // muzzle flash
+  if (m.muzzle > 0){
+    const f = m.muzzle / 5;
+    ctx.fillStyle = `rgba(255,236,138,${0.9*f})`;
+    ctx.beginPath();
+    ctx.moveTo(19*gs, 0);
+    ctx.lineTo(28*gs*f + 19*gs, -4*gs*f);
+    ctx.lineTo(24*gs*f + 19*gs, 0);
+    ctx.lineTo(28*gs*f + 19*gs, 4*gs*f);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = `rgba(255,255,255,${0.8*f})`;
+    ctx.beginPath(); ctx.arc(19*gs, 0, 3*gs*f, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawHat(m, s){
+  const y0 = -s*0.95;
+  switch(m.hat){
+    case 'crown':
+      ctx.fillStyle = '#ffd75e';
+      ctx.beginPath();
+      ctx.moveTo(-s*0.35, y0); ctx.lineTo(-s*0.35, y0 - s*0.3); ctx.lineTo(-s*0.17, y0 - s*0.12);
+      ctx.lineTo(0, y0 - s*0.34); ctx.lineTo(s*0.17, y0 - s*0.12); ctx.lineTo(s*0.35, y0 - s*0.3);
+      ctx.lineTo(s*0.35, y0); ctx.closePath(); ctx.fill();
+      break;
+    case 'bandana':
+      ctx.fillStyle = '#ff5d5d';
+      ctx.beginPath(); ctx.ellipse(0, y0 + s*0.08, s*0.5, s*0.16, 0, Math.PI, 0); ctx.fill();
+      break;
+    case 'leaf':
+      ctx.fillStyle = '#3fae63';
+      ctx.beginPath(); ctx.ellipse(s*0.1, y0 - s*0.05, s*0.3, s*0.12, -0.5, 0, Math.PI*2); ctx.fill();
+      break;
+    case 'flower':
+      ctx.fillStyle = '#ff8fd0';
+      for(let i=0;i<5;i++){
+        const a = i/5*Math.PI*2;
+        ctx.beginPath(); ctx.arc(s*0.3 + Math.cos(a)*s*0.1, y0 - s*0.05 + Math.sin(a)*s*0.1, s*0.08, 0, Math.PI*2); ctx.fill();
+      }
+      ctx.fillStyle = '#ffd75e';
+      ctx.beginPath(); ctx.arc(s*0.3, y0 - s*0.05, s*0.07, 0, Math.PI*2); ctx.fill();
+      break;
+    case 'headband':
+      ctx.fillStyle = '#5db8ff';
+      ctx.fillRect(-s*0.5, y0, s, s*0.12);
+      break;
+  }
+}
+
+function drawBanana(b){
+  ctx.save();
+  ctx.translate(b.x, b.y);
+  ctx.rotate(b.spin);
+  ctx.strokeStyle = '#ffd75e';
+  ctx.lineWidth = 5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(0, 0, 7, 0.2*Math.PI, 0.8*Math.PI); ctx.stroke();
+  ctx.restore();
+}
+
+function render(){
+  drawJungle();
+  // sort by y for painter's order
+  const sorted = [...monkeys].sort((a,b) => a.y - b.y);
+  for (const m of sorted) drawMonkey(m);
+  for (const b of bananas) drawBanana(b);
+  for (const p of particles){
+    ctx.globalAlpha = Math.min(1, p.life / 20);
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  for (const f of floaters){
+    ctx.globalAlpha = Math.min(1, f.life / 25);
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = f.color;
+    ctx.fillText(f.text, f.x, f.y);
+  }
+  ctx.globalAlpha = 1;
+  if (monkeys.length === 0){
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(111,148,131,.7)';
+    ctx.font = '16px monospace';
+    ctx.fillText('Arena empty — waiting for buys... (or hit Demo Mode)', W/2, H/2);
+  }
+}
+
+function loop(){ update(); render(); requestAnimationFrame(loop); }
+
+/* ============ FEED / LEADERBOARD ============ */
+const feedEl = document.getElementById('feed');
+function addEvent(type, html){
+  const d = document.createElement('div');
+  d.className = 'evt ' + type;
+  d.innerHTML = html;
+  feedEl.prepend(d);
+  while (feedEl.children.length > 60) feedEl.lastChild.remove();
+}
+function renderChamps(){
+  const el = document.getElementById('leaderboard');
+  el.innerHTML = champions.length ? '' : '<div class="evt sys">No champions yet — first round in progress</div>';
+  champions.forEach((c, i) => {
+    const d = document.createElement('div');
+    d.className = 'champ';
+    d.innerHTML = `<span class="crown">${i===0?'👑':'🏅'}</span><span class="wallet">${c.wallet}</span><span class="kills">${c.kills} kills</span>`;
+    el.appendChild(d);
+  });
+}
+
+/* ============ PUMPPORTAL WEBSOCKET ============ */
+const statusEl = document.getElementById('status');
+function setStatus(txt, cls){ statusEl.textContent = '● ' + txt; statusEl.className = cls || ''; }
+
+function connect(ca){
+  if (ws){ try{ ws.close(); }catch(e){} ws = null; }
+  subscribedCA = ca;
+  setStatus('connecting...', '');
+  ws = new WebSocket(WS_URL);
+  ws.onopen = () => {
+    wsAlive = true;
+    ws.send(JSON.stringify({ method: 'subscribeTokenTrade', keys: [ca] }));
+    setStatus('LIVE · ' + shortWallet(ca), 'live');
+    addEvent('sys', `Connected — watching trades on ${shortWallet(ca)}`);
+  };
+  ws.onmessage = (ev) => {
+    let d; try { d = JSON.parse(ev.data); } catch(e){ return; }
+    if (!d || !d.txType) return;
+    const sol = Number(d.solAmount) || 0;
+    const trader = d.traderPublicKey || 'unknown';
+    if (d.txType === 'buy' && sol > 0) spawnBuy(trader, sol);
+    else if (d.txType === 'sell' && sol > 0) spawnSell(trader, sol);
+  };
+  ws.onerror = () => setStatus('connection error', 'err');
+  ws.onclose = () => {
+    wsAlive = false;
+    if (subscribedCA){
+      setStatus('reconnecting...', 'err');
+      setTimeout(() => { if (subscribedCA) connect(subscribedCA); }, 3000);
+    } else setStatus('offline', '');
+  };
+}
+
+document.getElementById('connectBtn').addEventListener('click', () => {
+  const ca = document.getElementById('caInput').value.trim();
+  if (!ca || ca.length < 30){ setStatus('invalid CA', 'err'); return; }
+  stopDemo();
+  connect(ca);
+});
+document.getElementById('caInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('connectBtn').click();
+});
+
+/* ============ DEMO MODE ============ */
+const DEMO_WALLETS = [];
+for (let i=0;i<40;i++){
+  let w = '';
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz123456789';
+  for (let j=0;j<44;j++) w += chars[Math.floor(Math.random()*chars.length)];
+  DEMO_WALLETS.push(w);
+}
+function demoTick(){
+  const r = Math.random();
+  const wallet = DEMO_WALLETS[Math.floor(Math.random()*DEMO_WALLETS.length)];
+  if (r < 0.68){
+    // buy: mostly small, occasional whale
+    const sol = Math.random() < 0.12 ? rand(2, 5) : rand(0.05, 1.2);
+    spawnBuy(wallet, sol);
+  } else if (r < 0.82 && monkeys.length > 0){
+    // simulate someone calling out the token → shield reward
+    const m = monkeys[Math.floor(Math.random() * monkeys.length)];
+    grantShield(m.wallet, 150, 'shilled the token on X');
+  } else {
+    spawnSell(wallet, rand(0.1, 1.5));
+  }
+  demoTimer = setTimeout(demoTick, rand(600, 2600));
+}
+function stopDemo(){
+  if (demoTimer){ clearTimeout(demoTimer); demoTimer = null; }
+  document.getElementById('demoBtn').classList.remove('active-demo');
+  document.getElementById('demoBtn').textContent = 'Demo Mode';
+}
+document.getElementById('demoBtn').addEventListener('click', () => {
+  if (demoTimer){ stopDemo(); setStatus(wsAlive ? 'LIVE · ' + shortWallet(subscribedCA) : 'offline', wsAlive ? 'live' : ''); return; }
+  if (ws){ subscribedCA = null; try{ ws.close(); }catch(e){} ws = null; }
+  document.getElementById('demoBtn').classList.add('active-demo');
+  document.getElementById('demoBtn').textContent = 'Stop Demo';
+  setStatus('DEMO MODE', 'live');
+  addEvent('sys', 'Demo mode: simulating pump.fun trades');
+  demoTick();
+});
+
+/* ============ BOOT ============ */
+resize();
+renderChamps();
+// URL override: yoursite.com/?ca=<address> also works
+const urlCA = new URLSearchParams(location.search).get('ca');
+const bootCA = (urlCA && urlCA.trim()) || MY_COIN_CA.trim();
+if (bootCA){
+  // locked to our coin — hide the paste UI, auto-connect
+  document.getElementById('caInput').style.display = 'none';
+  document.getElementById('connectBtn').style.display = 'none';
+  addEvent('sys', 'Welcome to Monkey Battle Royale. Every buy of our coin releases a monkey into the arena. 🍌');
+  connect(bootCA);
+} else {
+  addEvent('sys', 'Welcome to Monkey Battle Royale. Paste a pump.fun CA and hit Connect — every buy spawns a fighter. 🍌');
+}
+addEvent('sys', 'Press G to grant a 🛡 shield to a holder who called out the token (enter the start of their wallet).');
+loop();
+</script>
+</body>
+</html>
