@@ -367,21 +367,33 @@ try { soundOn = localStorage.getItem('mbr_sound') !== 'off'; } catch(e){}
 let lastSfxAt = 0;
 
 function ensureAudio(){
-  if (AC) return;
   try {
-    AC = new (window.AudioContext || window.webkitAudioContext)();
-    masterGain = AC.createGain();
-    masterGain.gain.value = soundOn ? 0.22 : 0;
-    masterGain.connect(AC.destination);
-    musicGain = AC.createGain();
-    musicGain.gain.value = 0.5;
-    musicGain.connect(masterGain);
+    if (!AC){
+      AC = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = AC.createGain();
+      masterGain.gain.value = soundOn ? 0.22 : 0;
+      masterGain.connect(AC.destination);
+      musicGain = AC.createGain();
+      musicGain.gain.value = 0.85;
+      musicGain.connect(masterGain);
+    }
+    // browsers often create the context suspended — resume until it runs
+    if (AC.state !== 'running') AC.resume();
     startMusic();
   } catch(e){ /* no audio support */ }
 }
-// browsers only allow sound after a user gesture
-window.addEventListener('pointerdown', ensureAudio, { once:true });
-window.addEventListener('keydown', ensureAudio, { once:true });
+// browsers only allow sound after a user gesture; keep trying until it's running
+function audioUnlock(){
+  ensureAudio();
+  if (AC && AC.state === 'running'){
+    window.removeEventListener('pointerdown', audioUnlock);
+    window.removeEventListener('keydown', audioUnlock);
+    window.removeEventListener('touchstart', audioUnlock);
+  }
+}
+window.addEventListener('pointerdown', audioUnlock);
+window.addEventListener('keydown', audioUnlock);
+window.addEventListener('touchstart', audioUnlock);
 
 function tone(freq, dur, type, vol, when, dest, slideTo){
   if (!AC) return;
@@ -442,8 +454,8 @@ function startMusic(){
     const ch = WAR_CHORDS[barCount % WAR_CHORDS.length];
     barCount++;
     // low drone
-    tone(ch.root, barLen + 0.1, 'sawtooth', 0.030, 0, musicGain);
-    tone(ch.root, barLen + 0.1, 'triangle', 0.045, 0, musicGain);
+    tone(ch.root, barLen + 0.1, 'sawtooth', 0.05, 0, musicGain);
+    tone(ch.root, barLen + 0.1, 'triangle', 0.07, 0, musicGain);
     // war drums: deep toms on 1 and 3, extra hit on the 4-and every other bar
     tone(70, 0.22, 'sine', 0.30, 0, musicGain, 40);
     tone(70, 0.22, 'sine', 0.26, beat * 2, musicGain, 40);
@@ -455,7 +467,7 @@ function startMusic(){
     for (let i = 0; i < 8; i++) noiseBurst(0.015, 0.018, i * beat * 0.5, musicGain);
     // tense ostinato — eighth-note arpeggio
     for (let i = 0; i < 8; i++){
-      tone(ch.arp[i % 4], 0.16, 'sawtooth', 0.028, i * beat * 0.5, musicGain);
+      tone(ch.arp[i % 4], 0.18, 'sawtooth', 0.05, i * beat * 0.5, musicGain);
     }
     // rising lift into the next section every 4th bar
     if (barCount % 4 === 0) tone(ch.root * 4, barLen, 'sine', 0.02, 0, musicGain, ch.root * 6);
