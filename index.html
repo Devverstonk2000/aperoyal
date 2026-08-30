@@ -322,7 +322,14 @@ const MY_COIN_CA = '';
 const ROUND_MS = 5 * 60 * 1000;
 const MAX_MONKEYS = 60;
 const WS_URL = 'wss://pumpportal.fun/api/data';
-const RPC_URL = 'https://public.rpc.solanavibestation.com';
+/* Free public RPCs are flaky for browser traffic — try each in turn.
+   For a production launch, get a free Helius API key (helius.dev) and put
+   'https://mainnet.helius-rpc.com/?api-key=YOUR_KEY' first in this list. */
+const RPC_URLS = [
+  'https://public.rpc.solanavibestation.com',
+  'https://solana.api.onfinality.io/public',
+  'https://api.mainnet-beta.solana.com',
+];
 const VALOR_PER_KILL = 0.15;   // SOL-equivalent rank credit per kill
 
 const RANKS = [
@@ -966,22 +973,27 @@ function renderChamps(){
 }
 
 /* ============ ROYAL COURT (on-chain top holders) ============ */
-async function rpc(method, params, attempt = 0){
-  const res = await fetch(RPC_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc:'2.0', id:1, method, params })
-  });
-  const j = await res.json();
-  if (j.error){
-    // back off and retry once on rate limiting
-    if (attempt < 2 && /Too Many|429/i.test(j.error.message || '')){
-      await new Promise(r => setTimeout(r, 4000 * (attempt + 1)));
-      return rpc(method, params, attempt + 1);
+let rpcPreferred = 0;   // remember which endpoint worked last
+async function rpc(method, params){
+  let lastErr = null;
+  for (let i = 0; i < RPC_URLS.length; i++){
+    const url = RPC_URLS[(rpcPreferred + i) % RPC_URLS.length];
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc:'2.0', id:1, method, params })
+      });
+      const j = await res.json();
+      if (j.error) throw new Error(j.error.message || 'RPC error');
+      rpcPreferred = (rpcPreferred + i) % RPC_URLS.length;
+      return j.result;
+    } catch(e){
+      lastErr = e;
+      await new Promise(r => setTimeout(r, 1500));
     }
-    throw new Error(j.error.message || 'RPC error');
   }
-  return j.result;
+  throw lastErr;
 }
 const COURT_TITLES = i =>
   i === 0 ? '👑 King' : i <= 2 ? '💎 Prince' : i <= 5 ? '🏰 Duke' : i <= 9 ? '🛡 Baron' : i <= 14 ? '⚔️ Knight' : '🗡 Squire';
